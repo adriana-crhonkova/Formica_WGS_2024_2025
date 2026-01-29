@@ -95,7 +95,14 @@ for SAMPLEDIR in $SAMPLE_DIRS; do
   done
 done
 
-echo "Done: $sample"
+echo "Trimming done: $sample"
+
+mamba activate WGS_test_env 
+echo "Starting FastQC"
+# Quality control
+fastqc 01.TrimmedData/$file"_1.trim.fq.gz" -o 01.TrimmedData/FastQC && \
+fastqc 01.TrimmedData/$file"_2.trim.fq.gz" -o 01.TrimmedData/FastQC
+
 
 
 -------------- END OF THE SCRIPT -----------------------------
