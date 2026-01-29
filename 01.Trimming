@@ -1,0 +1,109 @@
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+mkdir 01.TrimmedData
+cd 01.TrimmedData
+mkdir logs
+mkdir QC
+
+## Create name lists and add the names of the samples
+# Formica_20025
+BATCH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/Formica_20025
+OUT=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+find "$BATCH" -type d -path "*/01.RawData/LMUF_*" \
+  | xargs -n1 basename \
+  | sort -u > "$OUT/name.LMUF.list.Formica_20025"
+
+wc -l name.LMUF.list.Formica_20025     #output: 37
+
+# mapping_pop_04
+BATCH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_04
+OUT=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+find "$BATCH" -type d -path "*/01.RawData/LMUF_*" \
+  | xargs -n1 basename \
+  | sort -u > "$OUT/name.LMUF.list.mapping_pop_04"
+
+# mapping_pop_03
+BATCH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_03
+OUT=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+find "$BATCH" -type d -path "*/01.RawData/LMUF_*" \
+  | xargs -n1 basename \
+  | sort -u > "$OUT/name.LMUF.list.mapping_pop_03"
+
+# 01_trim.sh
+-------------- START OF THE SCRIPT -----------------------------
+#!/bin/bash -l 
+#SBATCH -J trim
+#SBATCH -o 01.TrimmedData/logs/trim_%j.out       
+#SBATCH -e 01.TrimmedData/logs/trim_%j.err     
+#SBATCH -t 10:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal 
+#SBATCH --array=1-37
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+set -euo pipefail
+
+#  Define Paths 
+BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/Formica_20025
+WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+NAMELIST=${WORKDIR}/name.LMUF.list.Formica_20025
+OUTDIR=${WORKDIR}/01.TrimmedData/Formica_20025
+QC=${OUTDIR}/QC
+
+# Load fastp
+eval "$(mamba shell hook --shell bash)"
+mamba activate FastP
+
+sample=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$NAMELIST" || true)
+[[ -z "$sample" ]] && exit 0
+
+echo "Processing sample: $sample"
+
+# This finds ALL folders that contain this sample across all subdirectories
+SAMPLE_DIRS=$(find "${BATCH_RAW}" -type d -path "*/01.RawData/${sample}")
+
+if [[ -z "$SAMPLE_DIRS" ]]; then
+  echo "No folders found for sample: $sample"
+  exit 0
+fi
+
+for SAMPLEDIR in $SAMPLE_DIRS; do
+  for R1 in "${SAMPLEDIR}"/*_1.fq.gz; do
+    [[ -f "$R1" ]] || continue
+
+    R2=${R1/_1.fq.gz/_2.fq.gz}
+    [[ -f "$R2" ]] || { echo "Missing R2 for $R1, skipping"; continue; }
+
+    base=$(basename "$R1" _1.fq.gz)
+
+    fastp \
+      -i "$R1" \
+      -I "$R2" \
+      -o "${OUTDIR}/${base}_1.trim.fq.gz" \
+      -O "${OUTDIR}/${base}_2.trim.fq.gz" \
+      -w ${SLURM_CPUS_PER_TASK} \
+      --length_required 50 \
+      --detect_adapter_for_pe \
+      -h "${QC}/${base}.fastp.html" \
+      -j "${QC}/${base}.fastp.json"
+  done
+done
+
+echo "Done: $sample"
+
+
+-------------- END OF THE SCRIPT -----------------------------
+
+# testing the script
+sbatch --array=1-1 01_trim.sh
+
+sacct -M biohpc_gen -j 3546903 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
+
