@@ -1,8 +1,13 @@
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
 mkdir 01.TrimmedData
 cd 01.TrimmedData
+mkdir Formica_20025
+cd Formica_20025
 mkdir logs
 mkdir QC
+cd ..
+cp -r Formica_20025 mapping_pop_04
+cp -r Formica_20025 mapping_pop_03
 
 ## Create name lists and add the names of the samples
 # Formica_20025
@@ -31,13 +36,13 @@ find "$BATCH" -type d -path "*/01.RawData/LMUF_*" \
   | xargs -n1 basename \
   | sort -u > "$OUT/name.LMUF.list.mapping_pop_03"
 
-# 01_trim.sh
+# 01_trim_Formica2025.sh
 -------------- START OF THE SCRIPT -----------------------------
 #!/bin/bash -l 
 #SBATCH -J trim
-#SBATCH -o 01.TrimmedData/logs/trim_%j.out       
-#SBATCH -e 01.TrimmedData/logs/trim_%j.err     
-#SBATCH -t 10:00:00
+#SBATCH -o 01.TrimmedData/Formica_20025/logs/trim_%j.out       
+#SBATCH -e 01.TrimmedData/Formica_20025/logs/trim_%j.err     
+#SBATCH -t 01:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal 
@@ -55,6 +60,7 @@ WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
 NAMELIST=${WORKDIR}/name.LMUF.list.Formica_20025
 OUTDIR=${WORKDIR}/01.TrimmedData/Formica_20025
 QC=${OUTDIR}/QC
+
 
 # Load fastp
 eval "$(mamba shell hook --shell bash)"
@@ -97,13 +103,20 @@ done
 
 echo "Trimming done: $sample"
 
-mamba activate WGS_test_env 
-echo "Starting FastQC"
+
 # Quality control
-fastqc 01.TrimmedData/$file"_1.trim.fq.gz" -o 01.TrimmedData/FastQC && \
-fastqc 01.TrimmedData/$file"_2.trim.fq.gz" -o 01.TrimmedData/FastQC
+mamba activate WGS_test_env
 
+echo "Starting FastQC"
 
+# Run FastQC on all trimmed reads for this sample
+for fq in "${OUTDIR}/${sample}"*_1.trim.fq.gz "${OUTDIR}/${sample}"*_2.trim.fq.gz; do
+  [[ -f "$fq" ]] || continue
+  fastqc "$fq" -o "$QC"
+done
+
+echo "FastQC done: $sample"
+echo "Done $sample"
 
 -------------- END OF THE SCRIPT -----------------------------
 
@@ -112,5 +125,34 @@ sbatch --array=1-1 01_trim.sh
 
 sacct -M biohpc_gen -j 3546903 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/QC/*.html .
+sbatch --array=2-2 01_trim.sh    #added FastQC
+sacct -M biohpc_gen -j 3548340 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+sbatch --array=3-30 01_trim_Formica2025.sh
+sacct -M biohpc_gen -j X --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+sbatch --array=31-37 01_trim_Formica2025.sh
+sacct -M biohpc_gen -j X --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03/QC/*.html .
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_04/QC/*.html .
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica20025/QC/*.html .
+
+
+#  Define Paths mapping_pop_03
+BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_03
+WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+NAMELIST=${WORKDIR}/name.LMUF.list.mapping_pop_03
+OUTDIR=${WORKDIR}/01.TrimmedData/mapping_pop_03
+QC=${OUTDIR}/QC
+
+#  Define Paths mapping_pop_04
+BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_04
+WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+NAMELIST=${WORKDIR}/name.LMUF.list.mapping_pop_04
+OUTDIR=${WORKDIR}/01.TrimmedData/mapping_pop_04
+QC=${OUTDIR}/QC
+
+
+
 
