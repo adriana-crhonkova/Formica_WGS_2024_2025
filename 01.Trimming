@@ -40,8 +40,8 @@ find "$BATCH" -type d -path "*/01.RawData/LMUF_*" \
 -------------- START OF THE SCRIPT -----------------------------
 #!/bin/bash -l 
 #SBATCH -J trim
-#SBATCH -o 01.TrimmedData/Formica_20025/logs/trim_%j.out       
-#SBATCH -e 01.TrimmedData/Formica_20025/logs/trim_%j.err     
+#SBATCH -o 01.TrimmedData/logs/trim_%j.out       
+#SBATCH -e 01.TrimmedData/logs/trim_%j.err     
 #SBATCH -t 01:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -57,9 +57,9 @@ set -euo pipefail
 #  Define Paths 
 BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/Formica_20025
 WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
-NAMELIST=${WORKDIR}/name.LMUF.list.Formica_20025
-OUTDIR=${WORKDIR}/01.TrimmedData/Formica_20025
-QC=${OUTDIR}/QC
+NAMELIST=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/name.LMUF.list.Formica_20025
+OUTDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica_20025
+QC=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica_20025/QC
 
 
 # Load fastp
@@ -118,41 +118,51 @@ done
 echo "FastQC done: $sample"
 echo "Done $sample"
 
--------------- END OF THE SCRIPT -----------------------------
+-------------- END OF THE SCRIPT -------------------------------------------------------------------------------
 
 # testing the script
 sbatch --array=1-1 01_trim.sh
-
 sacct -M biohpc_gen -j 3546903 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 sbatch --array=2-2 01_trim.sh    #added FastQC
 sacct -M biohpc_gen -j 3548340 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-sbatch --array=3-30 01_trim_Formica2025.sh
-sacct -M biohpc_gen -j X --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sbatch --array=3-3 01_trim_Richard.sh
+sacct -M biohpc_gen -j 3548475 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-sbatch --array=31-37 01_trim_Formica2025.sh
-sacct -M biohpc_gen -j X --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sbatch --array=4-4 01_trim_Formica2025.sh
+sacct -M biohpc_gen -j 3548489 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03/QC/*.html .
-scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_04/QC/*.html .
-scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica20025/QC/*.html .
-
+sbatch --array=5-37 01_trim_Formica2025.sh
+sacct -M biohpc_gen -j 3548491 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #  Define Paths mapping_pop_03
 BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_03
 WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
-NAMELIST=${WORKDIR}/name.LMUF.list.mapping_pop_03
-OUTDIR=${WORKDIR}/01.TrimmedData/mapping_pop_03
-QC=${OUTDIR}/QC
+NAMELIST=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/name.LMUF.list.mapping_pop_03
+OUTDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03
+QC=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03/QC
 
 #  Define Paths mapping_pop_04
 BATCH_RAW=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/raw_data/mapping_pop_04
 WORKDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
-NAMELIST=${WORKDIR}/name.LMUF.list.mapping_pop_04
-OUTDIR=${WORKDIR}/01.TrimmedData/mapping_pop_04
-QC=${OUTDIR}/QC
+NAMELIST=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/name.LMUF.list.mapping_pop_04
+OUTDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_04
+QC=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_04/QC
 
 
+# Pop_03
+sbatch --array=1-1 01_trim_pop03.sh
+sacct -M biohpc_gen -j 3548566 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+sbatch --array=2-52%10 01_trim_pop03.sh
+sacct -M biohpc_gen -j 3548584  --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# Pop_04
+sbatch 01_trim_pop04.sh
+sacct -M biohpc_gen -j 3548801  --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03/QC/*.html .
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_04/QC/*.html .
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica20025/QC/*.html .
