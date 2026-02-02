@@ -1,15 +1,13 @@
-# Old Environment for trimming and FastQC
-mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_test_env 
-mamba activate WGS_test_env
-mamba install -c bioconda trimmomatic=0.39
-mamba install -c bioconda fastqc
-
-# New Environment for trimming 
+# Environment for trimming 
 mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/FastP
 mamba activate FastP
 mamba install -c bioconda fastp
 fastp --version    # fastp 0.22.0
-mamba install -c bioconda multiqc
+
+# Quality Control
+mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/QualityControl
+mamba activate QualityControl
+mamba install -c conda-forge -c bioconda multiqc python=3.9 fastqc
 
 # Environment for mapping and read groups
 mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping
