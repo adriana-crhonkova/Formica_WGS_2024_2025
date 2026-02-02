@@ -1,0 +1,80 @@
+# Create output directories
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+mkdir temp
+mkdir 02.BAM
+cd 02.BAM
+mkdir logs
+mkdir stats
+mkdir nodupl
+cd nodupl
+mkdir stats
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica_20025
+ls *.trim.fq.gz \
+  | sed 's/_[12]\.trim\.fq\.gz$//' \
+  | sort -u > name.list.map
+
+
+# run separately the three seqeuncing runs
+
+# 02_map.sh
+------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J map
+#SBATCH -o 02.BAM/logs/map_%j.out
+#SBATCH -e 02.BAM/logs/map_%j.err
+#SBATCH -t 20:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=1-37%8
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=20G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+## Load environment
+# include picard, samtools, bwa and r-base
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+# Setting the paths
+REFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome       
+TRIMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/Formica_20025
+TMPBAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+BAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
+
+file=$(sed -n "$SLURM_ARRAY_TASK_ID"p 01.TrimmedData/Formica_20025/name.list.map)
+
+echo "STARTING file: $file"
+
+### 1. Map, sort & index ------------------------------------------------------
+
+
+echo "MAPPING"
+
+bwa mem -t8 $REFPATH/Formica_hybrid_v1_wFhyb_Sapis.fa $TRIMPATH/$file"_1.trim.fq.gz" $TRIMPATH/$file"_2.trim.fq.gz" | samtools sort -@8 -m512M -o $TMPBAMPATH/$file".bam" -
+
+samtools index -@4 $TMPBAMPATH/$file".bam"
+
+### 2. Compute insert size distribution ---------------------------------------
+
+echo "COLLECTING INSERT SIZES"
+
+picard CollectInsertSizeMetrics \
+I=$TMPBAMPATH/$file".bam" \
+O=$BAMPATH/stats/$file"_insert_size_metrics.txt" \
+H=$BAMPATH/stats/$file"_insert_size_hist.pdf"
+
+echo "DONE: $file"
+
+----------END OF THE SCRIPT ---------------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3549215 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
+-> MERGING
