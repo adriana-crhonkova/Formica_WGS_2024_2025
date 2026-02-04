@@ -85,6 +85,9 @@ BAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
 
 file=$(sed -n "$SLURM_ARRAY_TASK_ID"p 01.TrimmedData/mapping_pop_03/name.list.map)
 
+sacct -M biohpc_gen -j 3550569 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
 ## 02_map_pop04.sh
 # Setting the paths
 REFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome       
