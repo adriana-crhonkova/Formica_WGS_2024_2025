@@ -97,6 +97,8 @@ BAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
 
 file=$(sed -n "$SLURM_ARRAY_TASK_ID"p 01.TrimmedData/mapping_pop_04/name.list.map)
 
+sacct -M biohpc_gen -j 3553918 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+scontrol -M biohpc_gen update job=3553918 qos=biohpc_gen_low_prio
 
 
 ### 3. Merging BAMs
