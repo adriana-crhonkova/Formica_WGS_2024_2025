@@ -167,21 +167,5 @@ H=$BAMPATH/stats/$file"_insert_size_hist.pdf"
 
 echo "DONE: $file"
 ----------END OF THE SCRIPT ---------------------------------------------------------------------------------------------------------------------------------------------
-3555764
-
-
-
-### 3. Merging BAMs
-
-# list of unique sample prefixes
-samples=$(cut -d'_' -f1-2 name.list.map | sort -u)
-
-for sample in $samples; do
-  echo "Merging $sample"
-
-  samtools merge -@8 \
-    $TMPBAMPATH/${sample}.merged.bam \
-    $TMPBAMPATH/${sample}_*.bam
-done
-
+sacct -M biohpc_gen -j 3555764 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
 
