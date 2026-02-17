@@ -100,6 +100,76 @@ file=$(sed -n "$SLURM_ARRAY_TASK_ID"p 01.TrimmedData/mapping_pop_04/name.list.ma
 sacct -M biohpc_gen -j 3553918 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 scontrol -M biohpc_gen update job=3553918 qos=biohpc_gen_low_prio
 
+### Checking the *.out files to find the failed samples
+for f in *.out; do
+    echo "##########################Checking $f ############################"
+    head -n 5 "$f"
+done > log.list
+
+### Checking on which node the samples ran
+sacct -M biohpc_gen -j 3550569 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
+# It seems that node cm4r13c06s09 was the issue
+
+### Checking whether the failed samples produced corrupted *bam, as the failure happened after mapping
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=4G
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+samtools quickcheck -v /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/LMUF_00008a_MKDL250001155-1A_22YHFFLT4_L5.bam
+samtools quickcheck -v /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/LMUF_00012a_MKDL250001155-1A_22YHFFLT4_L4.bam
+samtools quickcheck -v /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/LMUF_00012a_MKDL250001155-1A_22YHFFLT4_L5.bam
+samtools quickcheck -v /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/LMUF_00020a_MKDL250001155-1A_22YHFFLT4_L5.bam
+# the .bam seems to be ok
+
+
+
+02_insert_sizes.sh
+------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J insert_sizes
+#SBATCH -o 02.BAM/logs/inserts_%j.out
+#SBATCH -e 02.BAM/logs/inserts_%j.err
+#SBATCH -t 01:00:00
+#SBATCH --exclude=cm4r13c06s09
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=2,7,8,17
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+## Load environment
+# include picard, samtools, bwa and r-base
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+# Setting the paths
+REFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome       
+TRIMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/01.TrimmedData/mapping_pop_03
+TMPBAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+BAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
+
+file=$(sed -n "$SLURM_ARRAY_TASK_ID"p 01.TrimmedData/mapping_pop_03/name.list.map)
+
+### 2. Compute insert size distribution ---------------------------------------
+
+echo "COLLECTING INSERT SIZES"
+
+picard CollectInsertSizeMetrics \
+I=$TMPBAMPATH/$file".bam" \
+O=$BAMPATH/stats/$file"_insert_size_metrics.txt" \
+H=$BAMPATH/stats/$file"_insert_size_hist.pdf"
+
+echo "DONE: $file"
+----------END OF THE SCRIPT ---------------------------------------------------------------------------------------------------------------------------------------------
+3555764
+
+
 
 ### 3. Merging BAMs
 
