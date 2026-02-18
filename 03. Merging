@@ -51,3 +51,60 @@ for sample in $samples; do
 done
 ------------- END OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3555927 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
+# job cancelled after 2h; only 10 samples processed
+
+du -sh /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+# Total size of *.bam in temp 476G
+
+------------- INTERACTIVE JOB  --------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=4G
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+samtools quickcheck -v /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/merged_BAM/*.bam
+# LMUF_00022a.merged.bam incomplete, the rest passed the quickcheck
+rm LMUF_00022a.merged.bam
+------------- END OF INTERACTIVE JOB  --------------------------------------------------------------------------------------------------------------------
+
+# 03_merge_continue.sh
+------------- START OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
+#!/bin/bash  
+#SBATCH -J merge
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/logs/merge.out       
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/logs/merge.err     
+#SBATCH -t 24:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal 
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=8G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+## Load environment
+# include picard, samtools, bwa and r-base
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+
+# Setting the paths
+TMPBAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+MERGEDBAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/merged_BAM
+
+### Merging BAMs
+
+# list of unique sample prefixes
+samples=$(cut -d'_' -f1-2 name.list.merge | sort -u | tail -n +10)
+
+for sample in $samples; do
+    echo "Merging $sample"
+    echo "Files: " $TMPBAMPATH/${sample}_*.bam
+  samtools merge -@8 \
+    $MERGEDBAMPATH/${sample}.merged.bam \
+    $TMPBAMPATH/${sample}_*.bam
+  echo "Merging $sample done"
+done
+------------- END OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3556631 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
