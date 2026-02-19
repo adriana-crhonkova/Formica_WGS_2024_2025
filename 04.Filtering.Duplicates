@@ -1,0 +1,78 @@
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/merged_BAM
+
+ls *.bam | sed 's/\.bam$//' > name.list.filt
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+# 04_filtering_duplicates.sh
+------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J filtering_duplicates
+#SBATCH -o 04.BAM/logs/filt_%j.out
+#SBATCH -e 04.BAM/logs/filt_%j.err
+#SBATCH -t 08:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=1-89%8
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=20G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+## Load environment
+# include picard, samtools, bwa and r-base
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025
+
+# Setting the paths
+REFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome       
+TMPBAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp/merged_BAM
+BAMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
+
+file=$(sed -n "$SLURM_ARRAY_TASK_ID"p $TMPBAMPATH/name.list.filt)
+
+
+###
+### 1. Indexing Merged BAMs ----------------------------------------------------
+###
+
+echo "###### INDEXING $file"
+
+samtools index -@4 $TMPBAMPATH/${file}".bam"
+
+
+###
+### 2. Filter duplicates ----------------------------------------------------
+###
+
+echo "###### FILTERING DUPLICATES"
+
+picard MarkDuplicates \
+I=$TMPBAMPATH/${file}".bam" \
+O=$BAMPATH/nodupl/${file}"_nodupl.bam" \
+M=$BAMPATH/nodupl/stats/${file}"_dupl_metrics.txt" \
+REMOVE_DUPLICATES=T TMP_DIR=$TMPBAMPATH
+
+
+###
+### 3. Index and compute stats ------------------------------------------------
+###
+
+echo "###### INDEX & GET FLAGSTATS"
+
+samtools index -@4 $BAMPATH/nodupl/${file}"_nodupl.bam" && \
+samtools flagstat -@4 $BAMPATH/nodupl/${file}"_nodupl.bam" > $BAMPATH/nodupl/stats/${file}"_nodupl.flagstat" && \
+samtools idxstats $BAMPATH/nodupl/${file}"_nodupl.bam" > $BAMPATH/nodupl/stats/${file}"_nodupl.idxstat"
+
+# samtools idxstats use single thread whereas index and flagstat use multithread. Therefore the -@4 was not working for idxstats.
+
+echo "###### DONE! sample ID: $file"
+------------- END OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3557750 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
+
