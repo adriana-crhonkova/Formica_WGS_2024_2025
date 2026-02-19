@@ -7,7 +7,7 @@ mkdir nodupl_RG
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl
 ls *bam > nodupl_name.list
 
-# 03_RGs.sh
+# 05_RGs.sh
 ------------- START OF THE SCRIPT -------------
 #!/bin/bash 
 #SBATCH -J RGs
@@ -58,3 +58,4 @@ samtools index -@4 $FINALDIR/$sample"_nodupl_wRG.bam"
 
 
 ------------- END OF THE SCRIPT -------------
+sacct -M biohpc_gen -j 3558127 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
