@@ -1,0 +1,60 @@
+# preparing output directories
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
+mkdir nodupl_RG
+
+
+#### Create nodupl_name.list
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl
+ls *bam > nodupl_name.list
+
+# 03_RGs.sh
+------------- START OF THE SCRIPT -------------
+#!/bin/bash 
+#SBATCH -J RGs
+#SBATCH -o 02.BAM/logs/RGs_%j.out
+#SBATCH -e 02.BAM/logs/RGs_%j.err
+#SBATCH -t 01:00:00                
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=1-89%8
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=2GB 
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment WGS_mapping
+# include picard, samtools, bwa and r-base
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping
+
+FINALDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl
+file=$(sed -n "$SLURM_ARRAY_TASK_ID"p nodupl_name.list)
+
+sample=${file%_nodupl*}
+
+###
+### Add read group
+###
+
+# Add RGs
+picard AddOrReplaceReadGroups \
+    I=$file \
+    O=$FINALDIR/$sample"_nodupl_wRG.bam" \
+    RGID=$sample \
+    RGPL=illumina \
+    RGLB=1 \
+    RGSM=$sample \
+    RGPU=1 \
+    TMP_DIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
+
+# Index
+samtools index -@4 $FINALDIR/$sample"_nodupl_wRG.bam"
+
+
+------------- END OF THE SCRIPT -------------
