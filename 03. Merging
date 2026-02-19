@@ -108,3 +108,7 @@ for sample in $samples; do
 done
 ------------- END OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3556631 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
+
+# Checking number of merged *.bam (expected 37 + 52 = 89)
+ls -1 | wc -l    # output: 89
+
