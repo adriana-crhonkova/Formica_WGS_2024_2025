@@ -1,0 +1,100 @@
+### Create the input file list
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+
+# sort numeric, according to position 1,1
+ls *bam | sort -nk1,1 > input.list  
+
+### Create the output folder
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
+mkdir nodupl_RG_clip
+
+# 07_clipOverlap.sh
+------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+
+#!/bin/bash 
+#SBATCH -J clipOverlap
+#SBATCH -o 02.BAM/logs/clipOverlap_%j.out
+#SBATCH -e 02.BAM/logs/clipOverlap_%j.err
+#SBATCH -t 01:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=1-89%8
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1GB
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+# include bamUtil v1.0.15, samtools v1.9
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bamUtil
+
+
+# Define directories
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+INPUTDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+FINALDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG_clip
+
+# Get file & sample ID
+file=$(sed -n "$SLURM_ARRAY_TASK_ID"p input.list)
+sample=${file%_nodupl_wRG*}
+
+echo "### Processing $file"
+
+
+###
+### Clip overlaps
+###
+
+# Reads are sorted by coordinates (see "samtools sort" command after mapping)
+bam clipOverlap --in $INPUTDIR/${sample}"_nodupl_wRG.bam" --out $FINALDIR/${sample}"_nodupl_wRG_clip.bam" --stats --params
+
+
+###
+### Index
+###
+
+samtools index $FINALDIR/$sample"_nodupl_wRG_clip.bam"
+
+
+------------- END OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
+------------- INTERACTIVE JOB --------------------------------------------------------------------------------------------------------
+
+# Request an interactive job
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=2G
+
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+### Check that the bam files are alright: -------
+#(Despite the errors, last project (Satokangas et al 2023) worked well, so no reason for now to freak out about these.)
+
+## Unclipped ## 
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+picard ValidateSamFile I=A_74a_EKDN240013500-1A_223FHVLT4_L7_nodupl_wRG.bam R=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa MODE=SUMMARY
+
+# Output - Unclipped 
+Error Type      Count
+ERROR:INVALID_TAG_NM    20573
+
+
+## Clipped ## 
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG_clip
+picard ValidateSamFile I=A_74a_EKDN240013500-1A_223FHVLT4_L7_nodupl_wRG_clip.bam R=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa MODE=SUMMARY
+
+# Output - Clipped 
+Error Type                              Count
+ERROR:CIGAR_MAPS_OFF_REFERENCE          308
+ERROR:INVALID_CIGAR                     1045720
+ERROR:INVALID_TAG_NM                    2154405
+ERROR:MISMATCH_MATE_CIGAR_STRING        7306853
+
+sacct -M biohpc_gen -j 3467560 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
