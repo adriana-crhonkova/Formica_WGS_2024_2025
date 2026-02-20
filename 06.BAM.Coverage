@@ -1,17 +1,13 @@
 # prepare output directories
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl/stats
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats
 mkdir coverage
-
 
 
 ###
 ### Compute sequencing depth per sample (after duplicate removal) 
 ###
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Formica_WGS/WGS_2024_2025/02.BAM/nodupl
-ls *bam > ../bam.list 
-
-# 04.mosdepth.sh
+# 06.mosdepth.sh
 ------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
 
 #!/bin/bash
@@ -35,8 +31,9 @@ set -eo pipefail
 eval "$(mamba shell hook --shell bash)"
 mamba activate mosdepth
 
-FINALDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
+FINALDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl_RG
 
+# from here we just take the names
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/nodupl
 
 # Get file
@@ -49,6 +46,13 @@ mosdepth -t 1 -b 10000 -n -x ../stats/coverage/$sample $FINALDIR/$sample"_nodupl
 mosdepth -t 1 -b 10000 -n ../stats/coverage/${sample}_overlap_correction $FINALDIR/$sample"_nodupl_wRG.bam"
 
 ------------- END OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3558696 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Nodelist
+
+# MultiQC
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats
+mamba activate QualityControl
+multiqc coverage -o coverage/multiqc
+
 
 ### Get coverage for overlap corrected data  --------------------
 
