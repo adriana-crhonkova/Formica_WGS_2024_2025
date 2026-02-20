@@ -53,16 +53,17 @@ echo "### Processing $file"
 # Reads are sorted by coordinates (see "samtools sort" command after mapping)
 bam clipOverlap --in $INPUTDIR/${sample}"_nodupl_wRG.bam" --out $FINALDIR/${sample}"_nodupl_wRG_clip.bam" --stats --params
 
-
+echo "### Indexing"
 ###
 ### Index
 ###
 
 samtools index $FINALDIR/$sample"_nodupl_wRG_clip.bam"
 
+echo "### DONE: $file"
 
 ------------- END OF THE SCRIPT ----------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 3558900 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 ------------- INTERACTIVE JOB --------------------------------------------------------------------------------------------------------
