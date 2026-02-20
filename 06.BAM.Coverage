@@ -53,11 +53,11 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats
 mamba activate QualityControl
 multiqc coverage -o coverage/multiqc
 
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage/multiqc/multiqc_report.html .
 
 ### Get coverage for overlap corrected data  --------------------
 
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage
-rm -rf *global*
 
 for i in *overlap_correction.mosdepth.summary.txt; do echo $i; grep 'Scaffold' "$i" | awk '{sum+=$4} END{print sum/NR}'; done > all.overlap_correction.mosdepth.summary.tmp
 
@@ -75,7 +75,9 @@ for i in *_overlap_correction.mosdepth.summary.txt; do
     echo -e "$sample\t$avg"
 done > all.overlap_correction_no0003.mosdepth.summary.txt
 
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage/all.overlap_correction.mosdepth.summary.txt .
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage/all.overlap_correction_no0003.mosdepth.summary.txt .
+
 
 ### Get coverage for *NON* overlap corrected data  --------------------
 
@@ -91,9 +93,67 @@ rm *tmp*
 
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage/all.no_overlap_correction.mosdepth.summary.txt .
 
-### MODIFY THIS WHEN DECIDING WHICH SAMPLES TO KEEP (ESP #217 MEAN COV=2.16 IS LOW ###
-# in R
-# options(stringsAsFactors=F)
-# tt = read.table("all.overlap_correction.mosdepth.summary.txt", h = F)
-# summary(tt$V2)
-# overall mean: XXX (XX - XX)
+
+------------- R SCRIPT ----------------------------------------------------------------------------------------------------------------------
+# Assessing mean coverage
+
+options(stringsAsFactors=F)
+
+## No overlap correction
+tt0 = read.table("all.no_overlap_correction.mosdepth.summary.txt", h = F)
+summary(tt0$V2)
+hist(tt0$V2, main="Coverage distribution - No overlap correction", xlab="Coverage")
+# overall coverage 29.53 (min 11.94, max 52.67)
+
+## Without overlaps
+tt1 = read.table("all.overlap_correction.mosdepth.summary.txt", h = F)
+summary(tt1$V2)
+hist(tt1$V2, main="Coverage distribution - Overlap correction", xlab="Coverage")
+# overall coverage 26.21 (min 11.26, max 46.40)
+
+## Without overlaps and scaffolds 0 and 3
+tt2 = read.table("all.overlap_correction_no0003.mosdepth.summary.txt", h = F)
+summary(tt2$V2)
+hist(tt2$V2, main="Coverage distribution - Overlap correction without Scaffold 3", xlab="Coverage")
+# overall coverage 25.51 (min 10.46, max 45.66)
+
+### However this is comparing samples 2025 which was sequenced once and samples 2024,
+# which were re-sequenced.
+
+# filtering the two sets of samples
+samples_2025 = read.table("samples2025.txt", header = FALSE)$V1
+colnames(tt0) = c("sample", "coverage")
+colnames(tt1) = c("sample", "coverage")
+colnames(tt2) = c("sample", "coverage")
+
+## No overlap correction
+tt0$sample_clean = sub("\\.merged$", "", tt0$sample)
+tt0_2025 = tt0[tt0$sample_clean %in% samples_2025, ]
+tt0_2024 = tt0[!tt0$sample_clean %in% samples_2025, ]
+
+summary(tt0_2025$coverage)
+# overall coverage 15.06 (min 11.94, max 18.43)
+summary(tt0_2024$coverage)
+# overall coverage 39.82 (min 16.88, max 52.67)
+
+## Without overlaps
+tt1$sample_clean = sub("\\.merged$", "", tt1$sample)
+tt1_2025 = tt1[tt1$sample_clean %in% samples_2025, ]
+tt1_2024 = tt1[!tt1$sample_clean %in% samples_2025, ]
+
+summary(tt1_2025$coverage)
+# overall coverage 14.17 (min 11.26, max 17.44)
+summary(tt1_2024$coverage)
+# overall coverage 34.77 (min 13.29, max 46.40)
+
+## Without overlaps and scaffold 0 and 3
+tt2$sample_clean = sub("\\.merged$", "", tt2$sample)
+tt2_2025 = tt2[tt2$sample_clean %in% samples_2025, ]
+tt2_2024 = tt2[!tt2$sample_clean %in% samples_2025, ]
+
+summary(tt2_2025$coverage)
+# overall coverage 13.34 (min 10.46, max 16.49)
+summary(tt2_2024$coverage)
+# overall coverage 34.17 (min 12.93, max 45.66)
+
+------------- END OF R SCRIPT ----------------------------------------------------------------------------------------------------------------------
