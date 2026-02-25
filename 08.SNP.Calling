@@ -1,3 +1,6 @@
+### !!! NOT EDITED YET !!! ###
+
+
 # creating directories
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM
 mkdir bam_final
@@ -124,9 +127,6 @@ awk -F '[:-]' '{print $1 ":" ($2+1) "-" $3}' Formica_hybrid_v1_5e6_data_regions.
 
 
 ------------- EXIT INTERACTIVE SESSION ---------------------------------------------------------------------------------------------
-
-# editing ended here
-
 
 
 ###
