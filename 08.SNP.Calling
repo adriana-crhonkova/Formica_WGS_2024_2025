@@ -136,10 +136,7 @@ awk -F '[:-]' '{print $1 ":" ($2+1) "-" $3}' Formica_hybrid_v1_5e6_data_regions.
 
 ###
 ### Full SNP calling
-###
-# --skip-coverage = total DP combined across all samples; assuming max 400x per sample per region, 400X per sample * 103 samples = 41200X
-# use screen for the SNP calling https://linuxize.com/post/how-to-use-linux-screen/?utm_content=cmp-true
-# I am not using screen but slurm job. I feel it is more user friendly for me and have more experience with it. 
+### 
 
 
 # 08_SNPcalling.sh
@@ -149,10 +146,10 @@ awk -F '[:-]' '{print $1 ":" ($2+1) "-" $3}' Formica_hybrid_v1_5e6_data_regions.
 #SBATCH -J SNPcalling
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/SNPcalling.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/SNPcalling.err
-#SBATCH -t 48:00:00
+#SBATCH -t 120:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
-#SBATCH --partition=biohpc_gen_normal
+#SBATCH --partition=biohpc_gen_production
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
@@ -171,6 +168,7 @@ REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
 RES=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF
 BAM=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
 
+echo "Started SNP calling"
 
 freebayes-parallel \
   $REF/Formica_hybrid_v1_5e6_data_regions_1based.txt \
@@ -179,23 +177,23 @@ freebayes-parallel \
   -L $BAM/all.bam.list \
   -k \
   --genotype-qualities \
-  --skip-coverage 4000 \
+  --skip-coverage 10000 \
   --limit-coverage 100 \
   --use-best-n-alleles 3 \
   > "$RES/raw/all_samples_raw.vcf"
 
-# on Finnish cluster freebayes run automatically in parallel
+echo "Finished SNP calling"
 
-# max mean depth as per 'vcftools --depth' was 46x for sample 108-Flug. Later on all sites that have 2x per ind mean depth are anyway set as '.', which is why limiting to 100x with '--limit-coverage' is safe.
-# -E N=-1 disable complex variants #NOT USED CURRENTLY -  does it mess up w snpgap and vcfallelicprimitives later on?
-# --use-best-n-alleles 3 = reduce computational time to exclude multiple alternative alleles if present. Setting to 3 is safe since all but biallelic sites will be filtered out later on.
+# --skip-coverage was calculated as: 193 samples, max coverage across all samples 46.4X -> 46.4*193=8955.2 -> --skip-coverage 10000 will only skip super high-depth artifacts
 
 -------------- END OF SCRIPT ----------------------------------------------------------------------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3566824 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 # Started 4.3.2026 13:24
+## 48 hours was not enough; --skip-coverage 4000 -> Might be too low, was changed to --skip-coverage 10000
 
-
+sacct -M biohpc_gen -j 3570520 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+# Started 6.3.2026 16:31
 
 
 
