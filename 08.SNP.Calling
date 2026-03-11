@@ -194,7 +194,7 @@ sacct -M biohpc_gen -j 3566824 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 sacct -M biohpc_gen -j 3570520 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 # Started 6.3.2026 16:31
-
+# For next run try 32 CPUs
 
 
 ### !!! NOT EDITED YET !!! ###
