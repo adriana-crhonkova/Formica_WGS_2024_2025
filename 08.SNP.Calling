@@ -18,7 +18,7 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/Refer
 sed -i 's/\r$//' ReferenceSamplesLinks.txt
 
 # Download_Ref.sh
--------------- START OF THE SCRIPT ----------------------------------------------------------------------------------------------
+-------------- START OF THE SCRIPT 1 ----------------------------------------------------------------------------------------------
 #!/bin/bash -l 
 #SBATCH -J Download_Ref
 #SBATCH -t 04:00:00
@@ -43,7 +43,7 @@ xargs -P 8 -I {} bash -c 'wget -c --progress=bar:force "{}" && echo "Finished $(
 
 echo "All downloads completed at $(date)"
 
--------------- END OF THE SCRIPT ----------------------------------------------------------------------------------------------
+-------------- END OF THE SCRIPT 1 ----------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3565920 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 ls -l *bam | wc -l
@@ -61,7 +61,7 @@ mkdir 03.VCF
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF
 mkdir raw
 
-------------- INTERACTIVE SESSION ---------------------------------------------------------------------------------------------
+------------- INTERACTIVE SESSION 1 ---------------------------------------------------------------------------------------------
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=8G
 
 ### Copy "nodupl_RG_clip" and rename the copy bam_final
@@ -132,7 +132,7 @@ grep -v -e mtDNA -e wFhyb -e Spiroplasma -e Scaffold00 Formica_hybrid_v1_5e6_dat
 awk -F '[:-]' '{print $1 ":" ($2+1) "-" $3}' Formica_hybrid_v1_5e6_data_regions.txt > Formica_hybrid_v1_5e6_data_regions_1based.txt
 
 
-------------- EXIT INTERACTIVE SESSION ---------------------------------------------------------------------------------------------
+------------- EXIT INTERACTIVE SESSION 1 ---------------------------------------------------------------------------------------------
 
 ###
 ### Full SNP calling
@@ -140,7 +140,7 @@ awk -F '[:-]' '{print $1 ":" ($2+1) "-" $3}' Formica_hybrid_v1_5e6_data_regions.
 
 
 # 08_SNPcalling.sh
----------------------- START OF SCRIPT ------------------------------------------------------------------------------------------------------
+---------------------- START OF SCRIPT 2 ------------------------------------------------------------------------------------------------------
 
 #!/bin/bash 
 #SBATCH -J SNPcalling
@@ -186,7 +186,7 @@ echo "Finished SNP calling"
 
 # --skip-coverage was calculated as: 193 samples, max coverage across all samples 46.4X -> 46.4*193=8955.2 -> --skip-coverage 10000 will only skip super high-depth artifacts
 
--------------- END OF SCRIPT ----------------------------------------------------------------------------------------------------------------------------
+-------------- END OF SCRIPT 2 ----------------------------------------------------------------------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3566824 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 # Started 4.3.2026 13:24
@@ -196,14 +196,32 @@ sacct -M biohpc_gen -j 3570520 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 # Started 6.3.2026 16:31
 # For next run try 32 CPUs
 
+# reindexing the samples due to warning message about bam.bai being older then bam files. This was caused by copying the folder with bams and indexes. 
+# This should not influence the speed, but correcting it anyway. 
 
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=8G
+rm LMUF*.bam.bai
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/WGS_mapping  
+
+while read bam; do
+    if [ ! -f "${bam}.bai" ]; then
+        echo "Indexing: $bam"
+        samtools index "$bam"
+    else
+        echo "Skipping (index exists): $bam"
+    fi
+done < /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final/all.bam.list
+
+# rerun also the rest of the interactive job 1
+
+sacct -M biohpc_gen -j 3574478 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 ### !!! NOT EDITED YET !!! ###
 
 
 
 
 
-------------- INTERACTIVE SESSION ------------------------------------------------------------------------------------------------------------------------
+------------- INTERACTIVE SESSION 2 ------------------------------------------------------------------------------------------------------------------------
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/raw
@@ -211,7 +229,7 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/0
 mamba activate bcftools.env
 bcftools stats all_samples_raw.vcf > all_samples_raw.stats
 
-------------- EXIT INTERACTIVE SESSION ------------------------------------------------------------------------------------------------------------------------
+------------- EXIT INTERACTIVE SESSION 2 ------------------------------------------------------------------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3484259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
        JobID    Elapsed     MaxRSS  AllocCPUS      State
@@ -221,7 +239,7 @@ sacct -M biohpc_gen -j 3484259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 07_compress_sort.sh
-------------- START OF SCRIPT ------------------------------------------------------------------------------------------------------------------------
+------------- START OF SCRIPT 3 ------------------------------------------------------------------------------------------------------------------------
 
 ###
 ### Compress & sort
@@ -261,7 +279,7 @@ bcftools index -n all_samples.vcf.gz
 gunzip -c all_samples.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_per_chromosome.tab
 
 
-------------- END OF SCRIPT ------------------------------------------------------------------------------------------------------------------------
+------------- END OF SCRIPT 3 ------------------------------------------------------------------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3484282 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
        JobID    Elapsed     MaxRSS  AllocCPUS      State
