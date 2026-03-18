@@ -217,12 +217,14 @@ sacct -M biohpc_gen -j 3574478 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 sacct -M biohpc_gen -j 3576290 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
-# Started 14.3.2026 11:10
+# Started 14.3.2026 11:10; ended 17.3.2026
+       JobID    Elapsed     MaxRSS  AllocCPUS      State
+------------ ---------- ---------- ---------- ----------
+3576290      3-06:21:29                    32  COMPLETED
+3576290.bat+ 3-06:21:29  25779808K         32  COMPLETED
 
 
 
-
- ### NOT EDITED YET !!! ###
 ------------- INTERACTIVE SESSION 2 ------------------------------------------------------------------------------------------------------------------------
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
@@ -231,16 +233,21 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/0
 mamba activate bcftools.env
 bcftools stats all_samples_raw.vcf > all_samples_raw.stats
 
+# Quality control
+mamba activate QualityControl
+
+multiqc . \
+  --outdir multiqc_report \
+  --filename multiqc_report.html \
+  --title "SNP Calling QC Report"
+
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/multiqc_report/multiqc_report.html .
+
 ------------- EXIT INTERACTIVE SESSION 2 ------------------------------------------------------------------------------------------------------------------------
 
-sacct -M biohpc_gen -j 3484259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
-       JobID    Elapsed     MaxRSS  AllocCPUS      State
------------- ---------- ---------- ---------- ----------
-3484259        00:04:40                     1  COMPLETED
-3484259.0      00:04:40     13440K          1  COMPLETED
 
 
-07_compress_sort.sh
+09_compress_sort.sh
 ------------- START OF SCRIPT 3 ------------------------------------------------------------------------------------------------------------------------
 
 ###
@@ -249,12 +256,13 @@ sacct -M biohpc_gen -j 3484259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #!/bin/bash -l
 #SBATCH -J compress_sort
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/raw/compress_sort.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/raw/compress_sort.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/compress_sort.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/compress_sort.err
 #SBATCH -t 24:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
+#SBATCH --qos=biohpc_gen_low_prio
 #SBATCH --ntasks 1
 #SBATCH --mem=8G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
@@ -266,7 +274,7 @@ set -eo pipefail
 eval "$(mamba shell hook --shell bash)"
 mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/raw
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw
 
 # Compress
 bgzip all_samples_raw.vcf #samtools version 1.16.1, containing HTSlib 1.16
@@ -283,8 +291,6 @@ gunzip -c all_samples.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_pe
 
 ------------- END OF SCRIPT 3 ------------------------------------------------------------------------------------------------------------------------
 
-sacct -M biohpc_gen -j 3484282 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
-       JobID    Elapsed     MaxRSS  AllocCPUS      State
------------- ---------- ---------- ---------- ----------
-3484282        00:15:58                     1  COMPLETED
-3484282.bat+   00:15:58    912888K          1  COMPLETED
+sacct -M biohpc_gen -j 3578130 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/site_count_per_chromosome.tab .
