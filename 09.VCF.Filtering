@@ -269,9 +269,6 @@ bcftools index -t ${ind}.vcf.gz
 sacct -M biohpc_gen -j 3583545 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
-########### ENDED HERE ####################
-
-
 ##
 ## 4. HWE testing ---------------------------------------------------------------------------------
 ##
@@ -394,17 +391,11 @@ done
 echo "Done"
 
 ------------- END OF THE SCRIPT 3 ---------------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3584088 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+
 ###### ENDED EDITING HERE ##############
-
-
-sacct -M biohpc_gen -j 3493481 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
-       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
------------- ---------- ---------- ---------- ---------- --------
-3493481        00:22:03                     4  COMPLETED      0:0
-3493481.bat+   00:22:03    102564K          4  COMPLETED      0:0
-
-
-
 
 ############################## Filter again AN after dropping out individuals ### 
 
