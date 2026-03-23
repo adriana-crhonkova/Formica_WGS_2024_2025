@@ -119,11 +119,19 @@ bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed
 
 sacct -M biohpc_gen -j 3578262 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-
+       JobID    Elapsed     MaxRSS  AllocCPUS      State
+------------ ---------- ---------- ---------- ----------
+3578262        17:20:55                     8  COMPLETED
+3578262.bat+   17:20:55   3569444K          8  COMPLETED
 
 
 ------------- INTERACTIVE SESSION 1 ---------------------------------------------------------------------------------------------------------------------------------------------
-### NOT EDITED YET ###
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=8G --cpus-per-task=4
+
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
+
+# Sanity check (optional) - test whether the file can be fully read without errors
+bcftools view all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz > /dev/null
 
 ##
 ## 2. Prep for max DP filtering -------------------------------------------------------------------
@@ -133,6 +141,12 @@ sacct -M biohpc_gen -j 3578262 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 # Extract header from VCF
 bcftools view -h all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz > header.vcf
+       ## Reference samples have different headers then file names
+       # cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/ReferenceSamples
+       # mamba activate bamUtil
+       # samtools view -H Ref_102_nodupl_wRG_clip.bam | grep SM
+              # @RG     ID:102-Frufa    LB:1    PL:illumina     SM:102-Frufa    PU:1
+
 
 # Fix fields
 perl -npe 's/<ID=AO,Number=A/<ID=AO,Number=\./' header.vcf | perl -npe 's/<ID=AD,Number=R/<ID=AD,Number=\./' | perl -npe 's/<ID=QA,Number=A/<ID=QA,Number=\./' | perl -npe 's/<ID=GL,Number=G/<ID=GL,Number=\./' > header_AO_AD_QA_GL.vcf
@@ -142,17 +156,44 @@ bcftools reheader -h header_AO_AD_QA_GL.vcf -o all_samples.normalized.SnpGap_2.N
 
 # Check fraction missing data
 vcftools --gzvcf all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz --missing-indv --out all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.MISSING_DATA
+       # After filtering, kept 193 out of 193 Individuals
+       # Outputting Individual Missingness
+       # After filtering, kept 6131156 out of a possible 6131156 Sites
+       # Run Time = 328.00 seconds
 
-echo "Average missing data over all individuals:"
 cut -f5 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.MISSING_DATA.imiss | grep -v 'F_' | awk '{sum+=$1;} END{print sum/NR;}'
-
+       # 0.0333245
 
 ### b. Compute mean DP per individual
 vcftools --depth --gzvcf all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz --out all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader
 
 
-Rscript minMaxDP.R
+Rscript minMaxDP.R      
+       # did not work
+touch minMaxDP_updated.R 
+vi minMaxDP_updated.R 
+----------------------------- R Script ----------------------------------------------------------------------
+# Load the table
+dat <- read.table(
+  "all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.idepth",
+  header = TRUE,
+  stringsAsFactors = FALSE
+)
 
+# Compute min/max depth per sample
+dat$MIN_DEPTH <- round((dat$MEAN_DEPTH - 0.5)/2)  # min = half mean depth
+dat$MAX_DEPTH <- round(dat$MEAN_DEPTH * 2)        # max = twice mean depth
+
+# Save result
+write.table(
+  dat,
+  "all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.idepth.MinMax",
+  col.names = TRUE,
+  row.names = FALSE,
+  quote = FALSE,
+  sep = "\t"
+)
+----------------------------- END OF R Script ----------------------------------------------------------------------
 
 ### c. Create results folder
 mkdir logs
@@ -171,20 +212,29 @@ vcf-query -l all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ
 
 
 ------------- END OF INTERACTIVE SESSION 1 ---------------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3583538 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+JobID    Elapsed     MaxRSS  AllocCPUS      State
+------------ ---------- ---------- ---------- ----------
+3583538        01:04:27                     4  COMPLETED
+3583538.0      01:04:27   2887472K          4  COMPLETED
 
 
-# 09_splitDP.sh
+
+
+# 11_splitDP.sh
 ------------- START OF THE SCRIPT 2 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 #!/bin/bash -l
 #SBATCH -J splitDP
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/splitDP_%a.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/splitDP_%a.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/splitDP_%a.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/splitDP_%a.err
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
-#SBATCH -t 24:00:00
-#SBATCH --array=1-20
+#SBATCH --qos=biohpc_gen_low_prio
+#SBATCH -t 00:20:00
+#SBATCH --array=1-193%10
 #SBATCH --ntasks 1
 #SBATCH --mem=2G
 
@@ -198,7 +248,7 @@ echo "START script"
 eval "$(mamba shell hook --shell bash)"
 mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 
 # Get file name and sample ID
 ind=$(sed -n "$SLURM_ARRAY_TASK_ID"p ind.list)
@@ -208,81 +258,30 @@ cd individualDP/${ind}
 # Extract single individual from VCF and apply DP filters
 
 dpmin=2 # hard-coded, we will apply the same min filter accross all individuals afterwards
-dpmax=$(grep -w "$ind" /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.idepth.MinMax | cut -f5)
+dpmax=$(grep -w "$ind" /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.idepth.MinMax | cut -f5)
 
 echo "Processing individual $ind with $dpmin < DP <= $dpmax"
-bcftools view -s ${ind} -Ou /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz | bcftools filter -e "FORMAT/DP < ${dpmin} | FORMAT/DP >= ${dpmax}" --set-GTs . -Oz > ${ind}.vcf.gz &&
+bcftools view -s ${ind} -Ou /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz | bcftools filter -e "FORMAT/DP < ${dpmin} | FORMAT/DP >= ${dpmax}" --set-GTs . -Oz > ${ind}.vcf.gz &&
 bcftools index -t ${ind}.vcf.gz
 
 ------------- END OF THE SCRIPT 2 ---------------------------------------------------------------------------------------------------------------------------------------------
 
-sacct -M biohpc_gen -j 3489385 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
-       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
------------- ---------- ---------- ---------- ---------- --------
-3489385_1      00:00:06                     1     FAILED      1:0
-3489385_1.b+   00:00:06                     1     FAILED      1:0
-3489385_2      00:01:12                     1  COMPLETED      0:0
-3489385_2.b+   00:01:12     32460K          1  COMPLETED      0:0
-3489385_3      00:01:48                     1  COMPLETED      0:0
-3489385_3.b+   00:01:48     32156K          1  COMPLETED      0:0
-3489385_4      00:01:48                     1  COMPLETED      0:0
-3489385_4.b+   00:01:48     32272K          1  COMPLETED      0:0
-3489385_5      00:01:49                     1  COMPLETED      0:0
-3489385_5.b+   00:01:49     32616K          1  COMPLETED      0:0
-3489385_6      00:01:49                     1  COMPLETED      0:0
-3489385_6.b+   00:01:49     32064K          1  COMPLETED      0:0
-3489385_7      00:01:49                     1  COMPLETED      0:0
-3489385_7.b+   00:01:49     32328K          1  COMPLETED      0:0
-3489385_8      00:01:49                     1  COMPLETED      0:0
-3489385_8.b+   00:01:49     32640K          1  COMPLETED      0:0
-3489385_9      00:01:49                     1  COMPLETED      0:0
-3489385_9.b+   00:01:49     32448K          1  COMPLETED      0:0
-3489385_10     00:01:49                     1  COMPLETED      0:0
-3489385_10.+   00:01:49     32720K          1  COMPLETED      0:0
-3489385_11     00:01:50                     1  COMPLETED      0:0
-3489385_11.+   00:01:50     33236K          1  COMPLETED      0:0
-3489385_12     00:01:49                     1  COMPLETED      0:0
-3489385_12.+   00:01:49     32068K          1  COMPLETED      0:0
-3489385_13     00:01:27                     1  COMPLETED      0:0
-3489385_13.+   00:01:27     29124K          1  COMPLETED      0:0
-3489385_14     00:01:27                     1  COMPLETED      0:0
-3489385_14.+   00:01:27     28516K          1  COMPLETED      0:0
-3489385_15     00:01:27                     1  COMPLETED      0:0
-3489385_15.+   00:01:27     27904K          1  COMPLETED      0:0
-3489385_16     00:01:27                     1  COMPLETED      0:0
-3489385_16.+   00:01:27     28416K          1  COMPLETED      0:0
-3489385_17     00:01:00                     1  COMPLETED      0:0
-3489385_17.+   00:01:00     28456K          1  COMPLETED      0:0
-3489385_18     00:01:25                     1  COMPLETED      0:0
-3489385_18.+   00:01:25     28128K          1  COMPLETED      0:0
-3489385_19     00:01:28                     1  COMPLETED      0:0
-3489385_19.+   00:01:28     28252K          1  COMPLETED      0:0
-3489385_20     00:01:28                     1  COMPLETED      0:0
-3489385_20.+   00:01:28     28900K          1  COMPLETED      0:0
-
-#This runs quite fast, why asking for 24h?
-
-# The first sample failed because the directory was already created in previous failed run 
-sbatch --array=1-1 09_splitDP.sh
-sacct -M biohpc_gen -j 3489460 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
-       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
------------- ---------- ---------- ---------- ---------- --------
-3489460_1      00:01:14                     1  COMPLETED      0:0
-3489460_1.b+   00:01:14     32580K          1  COMPLETED      0:0
+sacct -M biohpc_gen -j 3583545 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+########### ENDED HERE ####################
 
 
 ##
 ## 4. HWE testing ---------------------------------------------------------------------------------
 ##
-10_filt3.sh
+12_filt3.sh
 ------------- START OF THE SCRIPT 3 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 #!/bin/bash -l
 #SBATCH -J filt3
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/filt3.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/filt3.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filt3.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filt3.err
 #SBATCH -t 12:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -301,7 +300,7 @@ mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcf
 
 echo "4.HWE testing"
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/individualDP
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/individualDP
 
 ### Combine all samples
 echo "Merging samples"
@@ -364,24 +363,24 @@ echo "6.Filter based on missing data"
 
 ### FILTERING BASED ON ALLELIC NUMBER (AN)
 
-# 103 diploid samples = 206 alleles expected             20 samples = 40 alleles expected
-# 10% missing data = 185,4 = 186 alleles min.            10% missing data = 36 alleles min
+# 193 diploid samples = 386 alleles expected           
+# 10% missing data = 38.6 = 348 alleles min.
 
 # DP5
 inputfile=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP5.hwe.vcf.gz
-bcftools view --threads 4 -Oz -i 'AN >= 36' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
+bcftools view --threads 4 -Oz -i 'AN >= 348' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
 
 # DP6
 inputfile=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP6.hwe.vcf.gz
-bcftools view --threads 4 -Oz -i 'AN >= 36' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
+bcftools view --threads 4 -Oz -i 'AN >= 348' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
 
 # DP7
 inputfile=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP7.hwe.vcf.gz
-bcftools view --threads 4 -Oz -i 'AN >= 36' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
+bcftools view --threads 4 -Oz -i 'AN >= 348' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
 
 # DP8
 inputfile=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.vcf.gz
-bcftools view --threads 4 -Oz -i 'AN >= 36' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
+bcftools view --threads 4 -Oz -i 'AN >= 348' ${inputfile} > ${inputfile%.vcf.gz}.AN10percMiss.vcf.gz
 
 
 # Index VCFs, count number of sites left overall & percentage of missing data
@@ -392,7 +391,12 @@ for i in *percMiss.vcf.gz ; do
   vcftools --gzvcf ${i} --missing-indv --out ${i%.vcf.gz}
 done
 
+echo "Done"
+
 ------------- END OF THE SCRIPT 3 ---------------------------------------------------------------------------------------------------------------------------------------------
+###### ENDED EDITING HERE ##############
+
+
 sacct -M biohpc_gen -j 3493481 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
        JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
 ------------ ---------- ---------- ---------- ---------- --------
