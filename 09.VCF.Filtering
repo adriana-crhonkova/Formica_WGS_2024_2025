@@ -82,39 +82,51 @@ TMPDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/temp
 
 echo "Normalisation"
 
+# Standardise variant representation
 bcftools norm -f /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa -m -both -O z -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/all_samples.normalized.vcf.gz /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw/all_samples.vcf.gz
 
 echo "Pre-filtering"
 
+# Removes SNPs that are within 2 bp of an indel
 bcftools filter --threads 8 -Oz -s+ --SnpGap 2 all_samples.normalized.vcf.gz > all_samples.normalized.SnpGap_2.vcf.gz && \
 
+# Excludes everything that is not a SNP (e.g., indels).
 bcftools filter --threads 8 -Oz -e 'TYPE!="snp"' -s NonSnp -m+ all_samples.normalized.SnpGap_2.vcf.gz > all_samples.normalized.SnpGap_2.NonSNP.vcf.gz && \
 
+# Keeps variants supported by reads on both strands and both directions
 bcftools filter --threads 8 -Oz -s Balance -m+ -i 'RPL>=1 && RPR>=1 & SAF>=1 && SAR>=1' all_samples.normalized.SnpGap_2.NonSNP.vcf.gz > all_samples.normalized.SnpGap_2.NonSNP.Balance.vcf.gz && \
 
+# Retains only variants that passed all filters so far
 bcftools view --threads 8 -O z -f PASS all_samples.normalized.SnpGap_2.NonSNP.Balance.vcf.gz > all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.vcf.gz && \
 
+# Decomposition & formatting
 bcftools view --threads 8 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.vcf.gz | vcfallelicprimitives --keep-info --keep-geno -t decomposed | sed '/^##/! s/|/\//g' | sed 's/\.:\.:\.:\.:\.:\.:\.:\./\.\/\.:\.:\.:\.:\.:\.:\.:\./g' | bcftools sort --temp-dir $TMPDIR --max-mem 4G -O z > all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.vcf.gz && \
 
+# Indexing
 bcftools index -t all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.vcf.gz
 echo "bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.vcf.gz"
 bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.vcf.gz
-
-echo "10_vcf_filtering.sh FINISHED"
 
 
 ##
 ## 1. SNP QUAL >= 30, biallelic -------------------------------------------------------------------
 ##
 
+# Keeps only SNP with quality score ≥ 30
 bcftools filter --threads 8 --include 'QUAL >= 30 && TYPE="snp"' -Oz all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.vcf.gz > all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.vcf.gz
-echo "gunzip -c all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.vcf.gz | grep -vc '#'"
+
+# Counting variants
 gunzip -c all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.vcf.gz | grep -vc '#'
 
+# Keeps only biallelic SNPs
 bcftools view --threads 8 --min-alleles 2 --max-alleles 2 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.vcf.gz -Oz > all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz
+
+# Indexing
 bcftools index -t all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz
-echo "bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz"
 bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz
+
+echo "10_vcf_filtering.sh FINISHED"
+
 ------------- END OF THE SCRIPT 1 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3578262 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
@@ -148,7 +160,7 @@ bcftools view -h all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.
               # @RG     ID:102-Frufa    LB:1    PL:illumina     SM:102-Frufa    PU:1
 
 
-# Fix fields
+# Fix fields - this prevents parsing errors after variant decomposition
 perl -npe 's/<ID=AO,Number=A/<ID=AO,Number=\./' header.vcf | perl -npe 's/<ID=AD,Number=R/<ID=AD,Number=\./' | perl -npe 's/<ID=QA,Number=A/<ID=QA,Number=\./' | perl -npe 's/<ID=GL,Number=G/<ID=GL,Number=\./' > header_AO_AD_QA_GL.vcf
 
 # Replace corrected header
@@ -161,6 +173,7 @@ vcftools --gzvcf all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.
        # After filtering, kept 6131156 out of a possible 6131156 Sites
        # Run Time = 328.00 seconds
 
+# Quick Quality Check
 cut -f5 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.MISSING_DATA.imiss | grep -v 'F_' | awk '{sum+=$1;} END{print sum/NR;}'
        # 0.0333245
 
@@ -306,6 +319,7 @@ bcftools merge -l sample.list -Oz --threads 4 > ../all_samples.normalized.SnpGap
 echo "Merging done"
 
 ### Test HWE in the samples
+# Computes Hardy-Weinberg equilibrium statistics per SNP
 cd ..
 vcftools --gzvcf all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.indDP.vcf.gz --hardy --out SAMPLES_hwe
 
@@ -394,21 +408,87 @@ echo "Done"
 sacct -M biohpc_gen -j 3584088 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+### Create a table with missingness per sample per DP
+# Sort each file by IID, skip header
+tail -n +2 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP5.hwe.AN10percMiss.imiss | sort -k2,2 > minDP5.tmp
+tail -n +2 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP6.hwe.AN10percMiss.imiss | sort -k2,2 > minDP6.tmp
+tail -n +2 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP7.hwe.AN10percMiss.imiss | sort -k2,2 > minDP7.tmp
+tail -n +2 all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.AN10percMiss.imiss | sort -k2,2 > minDP8.tmp
 
-###### ENDED EDITING HERE ##############
+awk '{print $1, $5}' minDP5.tmp > minDP5.cols
+awk '{print $1, $5}' minDP6.tmp > minDP6.cols
+awk '{print $1, $5}' minDP7.tmp > minDP7.cols
+awk '{print $1, $5}' minDP8.tmp > minDP8.cols
+
+# Start with the first depth
+cp minDP5.cols merged.tmp
+
+# Merge the remaining depths
+for f in minDP6.cols minDP7.cols minDP8.cols; do
+    join -a1 -a2 -e "NA" -o auto merged.tmp "$f" > merged_next.tmp
+    mv merged_next.tmp merged.tmp
+done
+
+# add header
+echo "INDV minDP5 minDP6 minDP7 minDP8" > header.txt
+cat header.txt merged.tmp > merged_FMISS_by_ID.txt
+
+# remove tmp files
+rm minDP5.cols minDP6.cols minDP7.cols minDP8.cols
+rm minDP5.tmp minDP6.tmp minDP7.tmp minDP8.tmp
+rm header.txt
+rm merged.tmp
+
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/merged_FMISS_by_ID.txt .
+
+------------------------------- R Script ----------------------------------------------
+library(ggplot2
+# Load merged F_MISS table
+merged <- read.table("LMU/HPC_DATA/VCF_filtering/merged_FMISS_by_ID.txt", header=TRUE)
+# Check data
+head(merged)
+
+# Barplot
+ggplot(merged, aes(x=reorder(INDV, -minDP8), y=minDP8)) +
+  geom_bar(stat="identity", fill="red") +
+  theme_minimal() +
+  labs(title="Missingness", x="Sample", y="DP8 Missingness") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Identify samples with any F_MISS > 0.5
+missing <- merged[apply(merged[,-1], 1, function(x) any(x > 0.1)), ]
+
+# Barplot
+ggplot(missing, aes(x=reorder(INDV, -minDP8), y=minDP8)) +
+  geom_bar(stat="identity", fill="red") +
+  theme_minimal() +
+  labs(title="Samples with >10% Missingness", x="Sample", y="DP8 Missingness") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Identify samples with any F_MISS > 0.5
+high_missing <- merged[apply(merged[,-1], 1, function(x) any(x > 0.5)), ]
+
+# View 
+high_missing
+
+# Barplot
+ggplot(high_missing, aes(x=reorder(INDV, -minDP8), y=minDP8)) +
+  geom_bar(stat="identity", fill="red") +
+  theme_minimal() +
+  labs(title="Samples with >50% Missingness", x="Sample", y="DP8 Missingness") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+--------------------------- END OF R Script --------------------------------------------
+## Individuals with more than 50% missingness on DP8 121-Fprat (100%), RN417 (100%), 105-FaquH (81%), s353 (73%), 54-Frufa (60%), RN418 (60%), s354 (54%)
+
+
 
 ############################## Filter again AN after dropping out individuals ### 
 
 
 ------------- START OF THE SCRIPT 4 ---------------------------------------------------------------------------------------------------------------------------------------------
 
-#### I skipped this because I did not filter any individuals / go to script 5
-
 #After filtering for depth (DP), we excluded individuals with more than 50% missing data before we continued to filtering by allelic number. 
-
-#We identified seven individuals with more than 50% missing data (RN418:74%, 105-FaquH:81%, 54-Frufa:63%, RN421:63%, RN425:61%, RN426:56%, RN422:56%)
-#We excluded these alongside with three individual F. rufa group genomes that were collaborative samples processed alongside our pipeline (s353:76%, s354:47%, 110-FaquH:3%)
-cd /scratch/project_2001443/barriers_introgr_formica/vcf/filt
 
 
 ######
