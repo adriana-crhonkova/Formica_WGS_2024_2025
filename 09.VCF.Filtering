@@ -630,3 +630,6 @@ echo "Finished"
 ------------- END OF THE SCRIPT 5 ---------------------------------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3586759 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+number of variants in DP8.AN10.noScaff0003.mac2.vcf.gz 1609054
+number of variants in DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz 9466
+number of variants in DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz 126102
