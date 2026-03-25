@@ -484,55 +484,97 @@ ggplot(high_missing, aes(x=reorder(INDV, -minDP8), y=minDP8)) +
 
 
 ############################## Filter again AN after dropping out individuals ### 
-
-
-------------- START OF THE SCRIPT 4 ---------------------------------------------------------------------------------------------------------------------------------------------
-
 #After filtering for depth (DP), we excluded individuals with more than 50% missing data before we continued to filtering by allelic number. 
 
-
-######
+# 13_filt4_AN.sh
+------------- START OF THE SCRIPT 4 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 #!/bin/bash -l
-#SBATCH -J filt_AN
-#SBATCH --account=project_2009316
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/logs/filt_AN_97inds.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/logs/filt_AN_97inds.err
+#SBATCH -J filt4_AN
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filt_AN.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filt_AN.err
 #SBATCH -t 04:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
 #SBATCH --ntasks 4
 #SBATCH --mem=8G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+
+echo "Removing samples with missingness higher than 50%"
+
+# Removing samples with missingness higer than 50%
+vcftools --gzvcf all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.vcf.gz \
+  --remove-indv 121-Fprat \
+  --remove-indv RN417 \
+  --remove-indv 105-FaquH \
+  --remove-indv s353 \
+  --remove-indv 54-Frufa \
+  --remove-indv RN418 \
+  --remove-indv s354 \
+  --recode \
+  --recode-INFO-all \
+  --stdout | bgzip > all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.vcf.gz
+
+# Indexing (tabix index for fast access by genomic position)
+bcftools index -t all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.vcf.gz
+# Sample count
+echo "number of inds when should be 186 ..."
+bcftools query -l all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.vcf.gz | wc -l
+# Indexing (sample index for fast access by sample)
+echo "number of variants ..."
+bcftools index -n all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.vcf.gz
+
+
+echo "Filtering based on AN"
 
 # FILTERING BASED ON ALLELIC NUMBER (AN)
-# 93 diploid samples = 186 alleles expected                   20 samples = 40 alleles expected
-# 10% missing data = 167,4 = 168 alleles min.                 10% missing data = 36 alleles min
+# 186 diploid samples = 372 alleles expected
+# 10% missing data = 334.8 = 335 alleles min.
 
-VCF_IN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.vcf.gz
-VCF_OUT=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.AN10percMiss.vcf.gz
+VCF_IN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.vcf.gz
+VCF_OUT=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.AN10percMiss.vcf.gz
 
 
 #Filter on allelic number (AN)
-bcftools view --threads 4 -Oz -i 'AN >= 36' $VCF_IN > $VCF_OUT
+#bcftools view --threads 4 -Oz -i 'AN >= 335' $VCF_IN > $VCF_OUT
+bcftools view --threads 4 \
+  -i 'AN >= 335' \
+  -Oz \
+  -o $VCF_OUT \
+  $VCF_IN
 
+echo "Indexing"
 bcftools index -t $VCF_OUT
 echo "number of variants after AN filtering..."
 bcftools index -n $VCF_OUT
 
+echo "Finished"
 ------------- END OF THE SCRIPT 4 ---------------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3585740 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+# not recoded after removal, the files were deleted
 
+sacct -M biohpc_gen -j 3586167 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+# updated script
 
 ------------ INTERACTIVE SESSION -------------------------------------------------------------------------------------------------------------------------------------------------
 #Exclude Scaffold03 (and indicate in the filename it has no Scaffold00 anyway) - for all analyses at this stage as we look for genome-wide correlations between variables
 
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=8G
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 mamba activate bcftools.env
 
-VCFIN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.vcf.gz
+VCFIN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.AN10percMiss.vcf.gz
 
 vcftools --gzvcf $VCFIN --not-chr Scaffold03 --recode --recode-INFO-all --stdout | bgzip > DP8.AN10.noScaff0003.vcf.gz       # Not directly for any analyses
 bcftools index -t DP8.AN10.noScaff0003.vcf.gz 
@@ -544,14 +586,13 @@ sacct -M biohpc_gen -j 3494591 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 3494591        00:06:04                     1  COMPLETED      0:0
 3494591.0      00:06:04     27368K          1  COMPLETED      0:0
 
-# 11_filter_mac_thin.sh
+
+# 14_filter_mac_thin.sh
 ------------- START OF THE SCRIPT 5 ---------------------------------------------------------------------------------------------------------------------------------------------
-
-
 #!/bin/bash -l
 #SBATCH -J filter_mac_thin
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/filter_mac_thin.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt/logs/filter_mac_thin.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filter_mac_thin.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filter_mac_thin.err
 #SBATCH -t 04:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -566,7 +607,7 @@ set -eo pipefail
 eval "$(mamba shell hook --shell bash)"
 mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 
 
 vcftools --gzvcf DP8.AN10.noScaff0003.vcf.gz --mac 2 --recode --recode-INFO-all --stdout | bgzip >  DP8.AN10.noScaff0003.mac2.vcf.gz       # Then thin w 1kb, add exsecta, select inds -> NJtree; thin w 20kb -> neighbournet
