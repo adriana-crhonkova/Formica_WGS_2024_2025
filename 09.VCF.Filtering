@@ -567,24 +567,10 @@ sacct -M biohpc_gen -j 3585740 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 sacct -M biohpc_gen -j 3586167 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 # updated script
 
------------- INTERACTIVE SESSION -------------------------------------------------------------------------------------------------------------------------------------------------
-#Exclude Scaffold03 (and indicate in the filename it has no Scaffold00 anyway) - for all analyses at this stage as we look for genome-wide correlations between variables
-
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=8G
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
-mamba activate bcftools.env
-
-VCFIN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.AN10percMiss.vcf.gz
-
-vcftools --gzvcf $VCFIN --not-chr Scaffold03 --recode --recode-INFO-all --stdout | bgzip > DP8.AN10.noScaff0003.vcf.gz       # Not directly for any analyses
-bcftools index -t DP8.AN10.noScaff0003.vcf.gz 
-
------------ END INTERACTIVE SESSION -------------------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 3494591 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
-       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
------------- ---------- ---------- ---------- ---------- --------
-3494591        00:06:04                     1  COMPLETED      0:0
-3494591.0      00:06:04     27368K          1  COMPLETED      0:0
+Output file
+#number of inds 186 
+#number of variants 6066652
+#number of variants after AN filtering 2155841
 
 
 # 14_filter_mac_thin.sh
@@ -593,12 +579,14 @@ sacct -M biohpc_gen -j 3494591 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 #SBATCH -J filter_mac_thin
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filter_mac_thin.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/logs/filter_mac_thin.err
-#SBATCH -t 04:00:00
+#SBATCH -t 10:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
 #SBATCH --ntasks 4
-#SBATCH --mem=8G
+#SBATCH --mem=16G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
 
 # set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
 set -eo pipefail
@@ -609,37 +597,36 @@ mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcf
 
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 
+#Exclude Scaffold03 (and indicate in the filename it has no Scaffold00 anyway) - for all analyses at this stage as we look for genome-wide correlations between variables
 
+VCFIN=all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.minDP8.hwe.above50missRemoved.AN10percMiss.vcf.gz
+
+echo "Excluding Scaffold 03"
+vcftools --gzvcf $VCFIN --not-chr Scaffold03 --recode --recode-INFO-all --stdout | bgzip > DP8.AN10.noScaff0003.vcf.gz       # Not directly for any analyses
+bcftools index -t DP8.AN10.noScaff0003.vcf.gz 
+
+
+echo "Filtering for minor allele count ≥ 2"
 vcftools --gzvcf DP8.AN10.noScaff0003.vcf.gz --mac 2 --recode --recode-INFO-all --stdout | bgzip >  DP8.AN10.noScaff0003.mac2.vcf.gz       # Then thin w 1kb, add exsecta, select inds -> NJtree; thin w 20kb -> neighbournet
 bcftools index -t DP8.AN10.noScaff0003.mac2.vcf.gz 
 echo "number of variants in DP8.AN10.noScaff0003.mac2.vcf.gz..."
 bcftools index -n DP8.AN10.noScaff0003.mac2.vcf.gz 
 
+
+echo "Thinning to one variant every 20 kb"
 vcftools --gzvcf DP8.AN10.noScaff0003.mac2.vcf.gz --thin 20000 --recode --recode-INFO-all --stdout | bgzip >  DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz       # Neighbournet
 bcftools index -t DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
 echo "number of variants in DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz..."
 bcftools index -n DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
 
-
+echo "Thinning to one variant every 1 kb"
 vcftools --gzvcf DP8.AN10.noScaff0003.mac2.vcf.gz --thin 1000 --recode --recode-INFO-all --stdout | bgzip >  DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz       # NJtree (still to add exsecta and select inds)
 bcftools index -t DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz  
 echo "number of variants in DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz  ..."
 bcftools index -n DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz  
 
+echo "Finished"
+
 ------------- END OF THE SCRIPT 5 ---------------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 3495236 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 3586759 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
-       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
------------- ---------- ---------- ---------- ---------- --------
-3495236        00:02:29                     4  COMPLETED      0:0
-3495236.bat+   00:02:29     22184K          4  COMPLETED      0:0
-
-# number of variants in DP8.AN10.noScaff0003.mac2.vcf.gz...
-# 1625807
-# number of variants in DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz...
-# 9911
-# number of variants in DP8.AN10.noScaff0003.mac2.thin1kb.vcf.gz  ...
-# 172463
-
-# After filtering, kept 20 out of 20 Individuals
-# After filtering, kept 172463 out of a possible 1625807 Sites
