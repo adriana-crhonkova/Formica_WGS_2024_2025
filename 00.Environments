@@ -54,3 +54,9 @@ mamba install -c bioconda vcflib
 mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pca.env
 mamba activate pca.env
 mamba install -c conda-forge -c bioconda r-base=4.2 bioconductor-snprelate
+
+mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
+mamba activate admixure.env
+mamba install -c conda-forge -c bioconda admixture plink
+# admixure v1.3.0
+# plink v1.9.0-b.8 64-bit
