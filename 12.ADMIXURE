@@ -55,48 +55,92 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admix
 OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
 FILE=DP8.AN10.noScaff0003.mac2.thin20kb
 
-for i in {2..7}
+for i in {3..14}
 do
 admixture --cv $OUTPATH/$FILE.bed $i > log${i}.out
 
 done
 
-grep "CV" *out | awk '{print $3,$4}' | cut -c 4,7-20 > $FILE.cv.error
+grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.cv.error
 
 ------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3590269 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
+17_admixture_updated.sh
+sacct -M biohpc_gen -j 3590510 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
 #Download the .dist file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.cv.error .
 # .Q for ADMFILE in R script; admixture proportion for K populations
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.6.Q .
 # .fam is from plink and it is important for list of samples in admixture
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.fam .
 
-## To be edited
 ------------ R SCRIPT -----------------------------------------------------------------------------------------------------------
-fam <- read.csv("./DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.fam", sep=" ", header=F)
+library(ggplot2)
 
-## No list right now
-samples <- read.csv("/Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/Scripts_WhatsHap&ShapeIt4/sample_table.tab", sep="\t")
+# Upload error file
 
-fam1_1 <- as.data.frame(fam1[,1])
-colnames(fam1_1) <- c("vcfID")
-fam1_2 <- left_join(fam1_1, samples, by="vcfID")
-fam1_3 <- fam1_2[,c(1,3)]
+error <- read.table("DP8.AN10.noScaff0003.mac2.thin20kb.cv.error")
 
-write.table(fam1_3, "./DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.plotting.list", quote=FALSE, row.names=F, col.names=F)
-#subsequently, add species information for new samples and modify vcf id's to numbers only
+error$V3 <- as.numeric(gsub(".*K=([0-9]+).*", "\\1", error$V3))
+
+# plot all Ks
+ggplot(error, aes(x = V3, y = V4)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "K", y = "CV error")
+
+# plot k5-10
+subset_data <- error[error$V3 >= 5 & error$V3 <= 10, ]
+
+ggplot(subset_data, aes(x = V3, y = V4)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "K", y = "CV error")
+
+### The best fit is K=6
+
+# upload *.fam 
+fam <- read.csv("DP8.AN10.noScaff0003.mac2.thin20kb.fam", sep=" ", header=F)
+
+# upload *.Q 
+tbl <- read.table("DP8.AN10.noScaff0003.mac2.thin20kb.6.Q")
 
 
+# sample names
+samples <- fam$V2
+samples <- sub("\\.merged$", "", samples)
 
-#Plot (pdf for publication quality)
+# margins for labels
+par(mar = c(8, 4, 4, 2))  
 
-cd /Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/gen_str/admixture/balanced
-ADMFILE=DP8.AN10.noScaff0003.mac2.thin20kb.6.Q
-ADMLIST=DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.plotting.list
+# plot with sample names
 
-Rscript "./plotADMIXTURE_localpatterns_pdf.R" \
--p $ADMFILE \
--i $ADMLIST -m 2 -k 5 -l \
-aquilonia_fi,aquilonia_swsc,lugubris_fi,lugubris_hybrids_fi,aqupolrufa_hybrids_fi,polyctena_sw,rufa_fi,pratensis_fi,lugubris_hybrids_ceu,aqupolrufa_hybrids_ceu,rufa_ger \
--o ${ADMFILE}
+barplot(t(as.matrix(tbl)), 
+        col = rainbow(6),        # adjust to number of K
+        xlab = NA,, 
+        ylab = "Ancestry", 
+        border = NA,  
+        names.arg = samples,     
+        las = 2,                 
+        cex.names = 0.5)        
+
+# ploting only LMUF samples
+
+lmuf_idx <- grep("LMUF", samples)  
+samples_lmuf <- samples[lmuf_idx]
+tbl_lmuf <- tbl[lmuf_idx, ] 
+
+barplot(t(as.matrix(tbl_lmuf)), 
+        col = rainbow(6),        
+        xlab = NA, 
+        ylab = "Ancestry", 
+        border = NA,  
+        names.arg = samples_lmuf,     
+        las = 2,                
+        cex.names = 0.6,         
+        space = 0.05)
+
+
