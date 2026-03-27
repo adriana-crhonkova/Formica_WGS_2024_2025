@@ -1,28 +1,19 @@
-## To be edited
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=2G --cpus-per-task=4
+--------- INTERACTIVE JOB -----------------------------------------------------------------------------------
 
-### ADMIXTURE analysis ###
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=2G --cpus-per-task=4
+mamba activate admixure.env
 
-module load biokit # what tools do i need? Plink
+VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
 
-#### What is the filter based on?
-## edit input and output files
-VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354.vcf.gz
-OUTVCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.vcf.gz
+# Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
+grep -v -F -f remove_samples.txt ind.list > /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/sample_list.txt
+awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/sample_list.txt > sample_list.plink.txt
 
-#Thin the VCF with 20kb distances to reduce linkage
+LIST=sample_list.plink.txt
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure
+OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb
 
-vcftools --gzvcf $VCF --thin 20000 --recode --stdout | bgzip > $OUTVCF
-bcftools index -t $OUTVCF
-bcftools index -n $OUTVCF #9279 SNPs
-
-# Convert the VCF ("OUTVCF") into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
-
-LIST=balanced_sample_list.list
-OUTPATH=/scratch/project_2001443/barriers_introgr_formica/gen_str/admixture/balanced
-OUTFILE=DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb
-
-$PROJAPPL/PLINK/plink --threads 1 --vcf $OUTVCF --make-bed \
+plink --threads 4 --vcf $VCF --make-bed \
 --double-id --allow-extra-chr --set-missing-var-ids @:# \
 --keep $OUTPATH/$LIST \
 --out $OUTPATH/$OUTFILE
@@ -33,17 +24,16 @@ cd $OUTPATH
 awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
 mv $OUTFILE.bim.tmp $OUTFILE.bim
 
+------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3590242 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-sbatch admixture.sh
-
-####For record the admixture.sh:
-
+# 17_admixture.sh
 ------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
 
 #!/bin/bash -l
 #SBATCH -J admixture
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/balanced/logs/admixture.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/balanced/logs/admixture.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture.err
 #SBATCH -t 00:30:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -58,12 +48,12 @@ set -eo pipefail
 
 # Load environment
 eval "$(mamba shell hook --shell bash)"
-mamba activate #### plink
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/balanced
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
 
-OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/balanced
-FILE=DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+FILE=DP8.AN10.noScaff0003.mac2.thin20kb
 
 for i in {2..7}
 do
@@ -74,11 +64,11 @@ done
 grep "CV" *out | awk '{print $3,$4}' | cut -c 4,7-20 > $FILE.cv.error
 
 ------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
-
+sacct -M biohpc_gen -j 3590269 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #Download the .dist file to local
-scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/balanced/*thin20kb.* .
-
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.6.Q .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.fam .
 
 ## To be edited
 ------------ R SCRIPT -----------------------------------------------------------------------------------------------------------
