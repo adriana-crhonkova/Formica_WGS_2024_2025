@@ -67,12 +67,16 @@ grep "CV" *out | awk '{print $3,$4}' | cut -c 4,7-20 > $FILE.cv.error
 sacct -M biohpc_gen -j 3590269 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #Download the .dist file to local
+# .Q for ADMFILE in R script; admixture proportion for K populations
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.6.Q .
+# .fam is from plink and it is important for list of samples in admixture
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.fam .
 
 ## To be edited
 ------------ R SCRIPT -----------------------------------------------------------------------------------------------------------
 fam <- read.csv("./DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.fam", sep=" ", header=F)
+
+## No list right now
 samples <- read.csv("/Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/Scripts_WhatsHap&ShapeIt4/sample_table.tab", sep="\t")
 
 fam1_1 <- as.data.frame(fam1[,1])
@@ -88,7 +92,7 @@ write.table(fam1_3, "./DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_th
 #Plot (pdf for publication quality)
 
 cd /Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/gen_str/admixture/balanced
-ADMFILE=DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb
+ADMFILE=DP8.AN10.noScaff0003.mac2.thin20kb.6.Q
 ADMLIST=DP8AN10.NoScaff0003.mac2.noInds417.418.105.110.353.354_thin20kb.plotting.list
 
 Rscript "./plotADMIXTURE_localpatterns_pdf.R" \
