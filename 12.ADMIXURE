@@ -144,4 +144,93 @@ barplot(t(as.matrix(tbl_lmuf)),
         cex.names = 0.6,         
         space = 0.05)
 
+------------ END OF R SCRIPT -----------------------------------------------------------------------------------------------------------
+### OPTIONAL CONTINUATION
+
+# remove F. exsecta from the dataset as well as unidentified references RN415-RN426
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+# ind.list contains all samples (created in previous steps); 193 samples
+# remove_samples.txt cantains samples which were removed for too high missingness; 7 samples
+
+cp ind.list ind.list.tmp
+sort ind.list.tmp > ind.list.sorted.tmp
+# sort remove_samples.txt > remove_samples_sorted.txt             ## already done in 11.NeigborNet
+grep -v -F -f remove_samples_sorted.txt ind.list.sorted.tmp > ind.list.filered.sorted.tmp  #186 samples; remove RNxxx manually - 176 samples
+
+touch remove_exsecta_RNxxx.txt
+vi remove_exsecta_RNxxx.txt    # paste names of the samples
+grep -v -F -f remove_exsecta_RNxxx.txt ind.list.filered.sorted.tmp > ind.list.filered.sorted.noExsecta.txt # 172 samples
+
+rm ind.list.tmp ind.list.sorted.tmp ind.list.filered.sorted.tmp 
+mv ind.list.filered.sorted.noExsecta.txt ind.list.filtered.sorted.noExsecta.txt  #correcting a typo 
+
+
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=2G --cpus-per-task=4
+--------- INTERACTIVE JOB -----------------------------------------------------------------------------------
+
+mamba activate admixure.env
+
+VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
+
+# Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
+cp ind.list.filtered.sorted.noExsecta.txt /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/ind.list.filtered.sorted.noExsecta.txt
+awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/ind.list.filtered.sorted.noExsecta.txt > ind.list.filtered.sorted.noExsecta.plink.txt
+
+LIST=ind.list.filtered.sorted.noExsecta.plink.txt
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta
+
+plink --threads 4 --vcf $VCF --make-bed \
+--double-id --allow-extra-chr --set-missing-var-ids @:# \
+--keep $OUTPATH/$LIST \
+--out $OUTPATH/$OUTFILE
+
+# ADMIXTURE doesn't accept non-human chromosome names. Replace the first column by 0.
+
+cd $OUTPATH
+awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
+mv $OUTFILE.bim.tmp $OUTFILE.bim
+
+------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3590242 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# 19_admixture_noExsecta.sh
+------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J admixture_noExsecta
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture_noExsecta.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture_noExsecta.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 1
+#SBATCH --mem=8G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+FILE=DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta
+
+for i in {3..14}
+do
+admixture --cv $OUTPATH/$FILE.bed $i > log${i}.out
+
+done
+
+grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.cv.error
+
+------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
 
