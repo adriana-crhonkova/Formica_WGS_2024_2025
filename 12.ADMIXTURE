@@ -6,11 +6,11 @@ mamba activate admixure.env
 VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
 
 # Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
-grep -v -F -f remove_samples.txt ind.list > /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/sample_list.txt
-awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/sample_list.txt > sample_list.plink.txt
+grep -v -F -f remove_samples.txt ind.list > /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/sample_list.txt
+awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/sample_list.txt > sample_list.plink.txt
 
 LIST=sample_list.plink.txt
-OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
 OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb
 
 plink --threads 4 --vcf $VCF --make-bed \
@@ -32,8 +32,8 @@ sacct -M biohpc_gen -j 3590242 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #!/bin/bash -l
 #SBATCH -J admixture
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture.err
 #SBATCH -t 00:30:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -175,7 +175,7 @@ mamba activate admixure.env
 VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
 
 # Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
-cp ind.list.filtered.sorted.noExsecta.txt /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/ind.list.filtered.sorted.noExsecta.txt
+cp ind.list.filtered.sorted.noExsecta.txt /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admitxure/ind.list.filtered.sorted.noExsecta.txt
 awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/ind.list.filtered.sorted.noExsecta.txt > ind.list.filtered.sorted.noExsecta.plink.txt
 
 LIST=ind.list.filtered.sorted.noExsecta.plink.txt
@@ -201,8 +201,8 @@ sacct -M biohpc_gen -j 3590242 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #!/bin/bash -l
 #SBATCH -J admixture_noExsecta
-#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture_noExsecta.out
-#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixure/logs/admixture_noExsecta.err
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_noExsecta.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_noExsecta.err
 #SBATCH -t 00:30:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
@@ -234,3 +234,11 @@ grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.cv.error
 
 ------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
 
+#Download the .dist file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.cv.error .
+# .Q for ADMFILE in R script; admixture proportion for K populations
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.5.Q .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.6.Q .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.7.Q .
+# .fam is from plink and it is important for list of samples in admixture
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.fam .
