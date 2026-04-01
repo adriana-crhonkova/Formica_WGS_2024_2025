@@ -2,8 +2,36 @@
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF
 mkdir pca
 
-####################################################################### R script ###############################################################
+## I used several filtered versions of the dataset for PCA. I refer to them as DATASET 1-4.
+## The bash script below stays the same for all R scripts (only edit the name of the R script).
+## The R scipt needs to be created before running the bash script!!!
 
+# 15_PCA.sh
+------------- START OF THE BASH SCRIPT  ---------------------------------------------------------------------------------------------
+
+#!/bin/bash
+#SBATCH --job-name=PCA
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --time=02:00:00
+#SBATCH --mem=8G
+#SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/pca_snprelate_%j.out
+#SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/pca_snprelate_%j.err
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pca.env
+
+# Run the R script
+Rscript /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/run_pca_snprelate.R
+
+------------- END OF THE BASH SCRIPT  --------------------------------------------------------------------------------------------------
+
+
+
+### PCA DATASET 1
+----------------------------------------------- R script --------------------------------------------------------
 # run_pca_snprelate.R
 library(SNPRelate)
 
@@ -42,86 +70,19 @@ cat("=== PCA completed successfully ===\n")
 snpgdsClose(genofile)
 
 
-################################################ END of R script ############################################################
-
-
-15_PCA.sh
-------------- START OF THE SCRIPT  ---------------------------------------------------------------------------------------------------------------------------------------------
-
-#!/bin/bash
-#SBATCH --job-name=PCA
-#SBATCH --get-user-env
-#SBATCH --clusters=biohpc_gen
-#SBATCH --partition=biohpc_gen_normal
-#SBATCH --time=02:00:00
-#SBATCH --mem=8G
-#SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/pca_snprelate_%j.out
-#SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/pca_snprelate_%j.err
-
-# Load environment
-eval "$(mamba shell hook --shell bash)"
-mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pca.env
-
-# Run the R script
-Rscript /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/run_pca_snprelate.R
-
-------------- END OF THE SCRIPT  ---------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------- END of R script -----------------------------------------------------------------
 
 sacct -M biohpc_gen -j 3586802 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,NodeList
-
-
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca .
 
+## For plotting in R see the "pca_WGS_2024_2025.R"
+# The script is not currently uploaded in github!!!
 
-##### Plotting in R ####
+# THE PCA SHOULD BE RUN AGAIN AFTER EXCLUDING SOME SAMPLES!!
 
-#-----------------------------------
-# PCA_Visualization.R
-#-----------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Load required library
-library(ggplot2)
-
-#-------------------------
-# Set file paths (update if needed)
-#-------------------------
-pca_scores_file <- "DP8_PCA_scores.csv"
-pca_variance_file <- "DP8_PCA_variance.csv"
-
-#-------------------------
-# Load data
-#-------------------------
-pca.df <- read.csv(pca_scores_file, stringsAsFactors = FALSE)
-var <- read.csv(pca_variance_file, header = FALSE, stringsAsFactors = FALSE)
-
-# Convert variance percentages to numeric
-pc_var <- as.numeric(var$V1[!is.na(as.numeric(var$V1))])
-
-#-------------------------
-# Plot PC1 vs PC2
-#-------------------------
-ggplot(pca.df, aes(x = PC1, y = PC2, label = sample)) +
-  geom_point(size = 3, color = "steelblue") +
-  geom_text(vjust = 2, size = 3) +
-  xlab(paste0("PC1 (", round(pc_var[1], 2), "%)")) +
-  ylab(paste0("PC2 (", round(pc_var[2], 2), "%)")) +
-  theme_minimal() +
-  ggtitle("PCA: PC1 vs PC2")
-
-#-------------------------
-# Optional: Plot PC1 vs PC3
-#-------------------------
-
-ggplot(pca.df, aes(x = PC1, y = PC3, label = sample)) +
-  geom_point(size = 3, color = "darkorange") +
-  geom_text(vjust = 2, size = 3) +
-  xlab(paste0("PC1 (", round(pc_var[1], 2), "%)")) +
-  ylab(paste0("PC3 (", round(pc_var[3], 2), "%)")) +
-  theme_minimal() +
-  ggtitle("PCA: PC1 vs PC3")
-
-#### THE PCA SHOULD BE RUN AGAIN AFTER EXCLUDING SOME SAMPLES!!
-
+### PCA DATASET 2
 # Dropping samples of F. excecta and F. pratensis
 --------------- R Script -------------------------------------------------------------------------------------
 
@@ -208,19 +169,19 @@ write.csv(round(pc.percent, 2), paste0(out.prefix, "_variance.csv"), row.names =
 cat("=== PCA completed successfully ===\n")
 snpgdsClose(genofile)
 
--------------------- END ----------------
+-------------------- END OF R SCRIPT  -------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3587025 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,NodeList
 
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/*drop* .
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+### PCA DATASET 3
+# Dropping samples of F. excecta, F. pratensis, F. polyctena, F. rufa, RNxxx
 
-### Optional Continuation
-## The following script is copied from NeigborNet (part Optional Continuation). This is a bit chaotic as I am optimising it.
+## The following script for excluding particular samples is copied from NeigborNet (part Optional Continuation). This is a bit chaotic as I am optimising it.
 
-######## Dropping samples of F. exsecta, F. pratensis, F. rufa references, F. polyctena 
-
-#################### --------------------- COPIED SCRIPT FORM NEIGHBORNET ---------------------------------------- #######################################
+--------------------- COPIED SCRIPT FORM NEIGHBORNET ----------------------------------------------------------------------------------------
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 # ind.list contains all samples (created in previous steps); 193 samples
 # remove_samples.txt cantains samples which were removed for too high missingness; 7 samples
@@ -264,7 +225,7 @@ vcftools --gzvcf $VCFPATH/$VCFIN \
   --recode --recode-INFO-all \
   --stdout | bgzip > $VCFPATH/DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch.vcf.gz
 
-#################### ---------------------END OF COPIED SCRIPT FORM NEIGHBORNET ---------------------------------------- #######################################
+---------------------END OF COPIED SCRIPT FORM NEIGHBORNET ---------------------------------------------------------------------------------------------
 # File to use: DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch.vcf.gz
 
 # run_pca_snprelate_AqBranch.R
@@ -337,5 +298,110 @@ snpgdsClose(genofile)
 sacct -M biohpc_gen -j 3593604 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,NodeList
 
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/*AqBranch* .
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+### PCA DATASET 4
+# Dropping samples of F. excecta, F. pratensis, F. polyctena, F. rufa, RNxxx. Admixed 1, Admixed 2
+
+---------------INTERACTIVE SESSION ------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=8G --ntasks=1
+
+mamba activate bcftools.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+# keep_only_Aq_branch_final.txt # 131 lines
+
+touch admixed.samples.txt # add names of admixed 1,2 references # 17 samples
+cp keep_only_Aq_branch_final.txt keep_only_Aq_branch_final_noAdmixed.tmp
+
+sort keep_only_Aq_branch_final_noAdmixed.tmp > keep_only_Aq_branch_final_noAdmixed_sorted.tmp
+sort admixed.samples.txt > admixed.samples.sorted.txt
+grep -v -x -F -f admixed.samples.sorted.txt keep_only_Aq_branch_final_noAdmixed_sorted.tmp > keep_only_Aq_branch_final_noAdmixed_sorted.txt 
+# output 116 but should be 114 - two admixed samples filtered for missingness in vcf filtering - the number of samples fits now.
+
+rm keep_only_Aq_branch_final_noAdmixed.tmp keep_only_Aq_branch_final_noAdmixed_sorted.tmp
+
+vcftools --gzvcf DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch.vcf.gz \
+  --keep keep_only_Aq_branch_final_noAdmixed_sorted.txt  \
+  --recode --recode-INFO-all \
+  --stdout | bgzip > DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch_noAdmixed.vcf.gz
+
+
+---------------END OF INTERACTIVE SESSION ------------------------------------------------------
+sacct -M biohpc_gen -j 3594381 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,NodeList
+
+
+--------------- R SCRIPT ------------------------------------------------------------------------
+# run_pca_snprelate_AqBranch_noAdmixed.R
+library(SNPRelate)
+
+# ---------------------------
+# Define input and output paths
+# ---------------------------
+vcf.fn <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch_noAdmixed.vcf.gz"
+
+# NEW GDS file for PCA with dropped samples
+gds.fn <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/DP8_AqBranch_noAdmixed.gds"
+
+# NEW output prefix for CSVs
+out.prefix <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/DP8_AqBranch_noAdmixed"
+
+# ---------------------------
+# Convert VCF to GDS
+# ---------------------------
+cat("=== Converting VCF to GDS ===\n")
+snpgdsVCF2GDS(vcf.fn, gds.fn, method="copy.num.of.ref")
+
+# ---------------------------
+# Open GDS file
+# ---------------------------
+cat("=== Opening GDS file ===\n")
+genofile <- snpgdsOpen(gds.fn)
+
+# ---------------------------
+# Check SNP summary
+# ---------------------------
+cat("=== Checking SNP summary ===\n")
+print(snpgdsSummary(genofile))
+
+
+# ---------------------------
+# Run PCA
+# ---------------------------
+cat("=== Running PCA ===\n")
+pca <- snpgdsPCA(
+  genofile, 
+  num.thread = 1, 
+  autosome.only = FALSE
+)
+
+pc.percent <- pca$varprop * 100
+
+# ---------------------------
+# Save PCA results
+# ---------------------------
+pca.df <- data.frame(
+  sample = pca$sample.id,
+  PC1 = pca$eigenvect[,1],
+  PC2 = pca$eigenvect[,2],
+  PC3 = pca$eigenvect[,3],
+  PC4 = pca$eigenvect[,4],
+  stringsAsFactors = FALSE
+)
+
+write.csv(pca.df, paste0(out.prefix, "_scores.csv"), row.names = FALSE)
+write.csv(round(pc.percent, 2), paste0(out.prefix, "_variance.csv"), row.names = FALSE)
+
+# ---------------------------
+# Close GDS
+# ---------------------------
+cat("=== PCA completed successfully ===\n")
+snpgdsClose(genofile)
+--------------- END OF R SCRIPT ------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3594384 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,NodeList
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/*noAdmixed* .
 
 
