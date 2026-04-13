@@ -242,3 +242,198 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.7.Q .
 # .fam is from plink and it is important for list of samples in admixture
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.fam .
+
+# download all Q files
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.*.Q .
+
+
+## Re-running K 2-14 (same script, just changed the loop "for i in {3..14} to for i in {2..14}")
+sacct -M biohpc_gen -j 3617146 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+#Download the .dist file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.cv.error .
+# download all Q files
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/DP8.AN10.noScaff0003.mac2.thin20kb.noExsecta.*.Q .
+
+
+
+# Dataset 3 - no references, only LMUF
+# Dataset 4 - only LMUF F. aquilonia, F. polyctena and F. rufa
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+### Dataset 3
+# keep only LMUF samples
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+# list with no F. exsecta and no RNxxx "ind.list.filtered.sorted.noExsecta.txt"
+grep '^LMUF' ind.list.filtered.sorted.noExsecta.txt > ind.list.onlyLMUF.txt
+mkdir dataset3
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G --cpus-per-task=4
+--------- INTERACTIVE JOB -----------------------------------------------------------------------------------
+
+mamba activate admixure.env
+
+VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
+
+# Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
+awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/ind.list.onlyLMUF.txt > ind.list.onlyLMUF.plink.txt
+mv ind.list.onlyLMUF.plink.txt dataset3/
+
+LIST=ind.list.onlyLMUF.plink.txt
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3
+OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF
+
+
+plink --threads 4 --vcf $VCF --make-bed \
+--double-id --allow-extra-chr --set-missing-var-ids @:# \
+--keep $OUTPATH/$LIST \
+--out $OUTPATH/$OUTFILE
+
+# ADMIXTURE doesn't accept non-human chromosome names. Replace the first column by 0.
+
+cd $OUTPATH
+awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
+mv $OUTFILE.bim.tmp $OUTFILE.bim
+
+------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3617744 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# 19_admixture_onlyLMUF.sh
+------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J admixture_onlyLMUF
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_onlyLMUF.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_onlyLMUF.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 1
+#SBATCH --mem=8G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3
+
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3
+FILE=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF
+
+for i in {2..10}
+do
+admixture --cv $OUTPATH/$FILE.bed $i > log${i}.out
+
+done
+
+grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.cv.error
+
+------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3617846 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+#Download the cv.error file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.cv.error .
+# .Q for ADMFILEs in R script; admixture proportion for K populations
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.*.Q .
+# .fam is from plink and it is important for list of samples in admixture
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset3/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fam .
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+### Dataset 4
+# keep only LMUF F. aquilonia, F. polyctena and F. rufa
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture
+
+
+touch ind.list.noPrat.noLug.noEx.txt
+vi ind.list.noPrat.noLug.noEx.tmp    # paste names of the samples
+awk '{print $0".merged"}' ind.list.noPrat.noLug.noEx.tmp > ind.list.noPrat.noLug.noEx.txt
+rm ind.list.noPrat.noLug.noEx.tmp
+
+mkdir dataset4
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G --cpus-per-task=4
+--------- INTERACTIVE JOB -----------------------------------------------------------------------------------
+
+mamba activate admixure.env
+
+VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
+
+# Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
+awk '{print $1, $1}' /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/ind.list.noPrat.noLug.noEx.txt > ind.list.noPrat.noLug.noEx.plink.txt
+mv ind.list.noPrat.noLug.noEx.plink.txt dataset4/
+
+LIST=ind.list.noPrat.noLug.noEx.plink.txt
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4
+OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx
+
+
+plink --threads 4 --vcf $VCF --make-bed \
+--double-id --allow-extra-chr --set-missing-var-ids @:# \
+--keep $OUTPATH/$LIST \
+--out $OUTPATH/$OUTFILE
+
+# ADMIXTURE doesn't accept non-human chromosome names. Replace the first column by 0.
+
+cd $OUTPATH
+awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
+mv $OUTFILE.bim.tmp $OUTFILE.bim
+
+------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3618379 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# 19_admixture_onlyLMUF.noPrat.noLug.noEx.sh
+------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J admixture_onlyLMUF.noPrat.noLug.noEx
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_onlyLMUF.noPrat.noLug.noEx.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_onlyLMUF.noPrat.noLug.noEx.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 1
+#SBATCH --mem=8G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4
+
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4
+FILE=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx
+
+for i in {2..10}
+do
+admixture --cv $OUTPATH/$FILE.bed $i > log${i}.out
+
+done
+
+grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.cv.error
+
+------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3618382 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+#Download the cv.error file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.cv.error .
+# .Q for ADMFILEs in R script; admixture proportion for K populations
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.*.Q .
+# .fam is from plink and it is important for list of samples in admixture
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.fam .
+
+
+
