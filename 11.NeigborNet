@@ -288,4 +288,4 @@ python /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/distMat.
 ------------- END OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3619507 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-
+scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/NeigbourNet/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.dist .
