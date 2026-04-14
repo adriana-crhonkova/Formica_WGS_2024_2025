@@ -99,7 +99,7 @@ scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/W
 
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 # ind.list contains all samples (created in previous steps); 193 samples
-# remove_samples.txt cantains samples which were removed for too high missingness; 7 samples
+# remove_samples.txt contains samples which were removed for too high missingness; 7 samples
 
 cp ind.list keep_only_Aq_branch.tmp
 sort keep_only_Aq_branch.tmp > keep_only_Aq_branch_sorted.tmp
@@ -202,6 +202,90 @@ python /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/distMat.
 
 sacct -M biohpc_gen -j 3592457 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
-
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/NeigbourNet/DP8.AN10.noScaff0003.mac2.thin20kb.AqBranch.fixedGT.dist .
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+### DATASET 3
+## only LMUF samples, no exsecta
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+# ind.list contains all samples (created in previous steps); 193 samples
+grep '^LMUF' ind.list > ind.list.onlyLMUF.tmp # 89 samples
+sort ind.list.onlyLMUF.tmp > ind.list.onlyLMUF.txt # remove by hand samples LMUF_00427b, LMUF00011a, LMUF_00030a, LMUF00034a (F. exsecta)
+# 85 samples
+---------------INTERACTIVE SESSION -------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=8G --ntasks=1
+
+mamba activate bcftools.env
+
+VCFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+VCFIN=DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
+
+vcftools --gzvcf $VCFPATH/$VCFIN \
+  --keep ind.list.onlyLMUF.txt \
+  --recode --recode-INFO-all \
+  --stdout | bgzip > $VCFPATH/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.vcf.gz
+
+VCFFILT=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.vcf.gz
+
+# Check for missingness
+vcftools --gzvcf $VCFPATH/$VCFFILT --missing-indv --out $VCFPATH/${VCFFILT}.missing
+sort -k 5 $VCFPATH/${VCFFILT}.missing.imiss | column -t # none over 50%
+
+
+# correct for python scripts to be usable
+bcftools +fixploidy DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.vcf.gz \
+  -Oz -o DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.vcf.gz
+
+#sanity check - if it prints nothing, it is good
+bcftools query -f '%CHROM\t%POS[\t%GT]\n' DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.vcf.gz \
+  | awk '{for(i=3;i<=NF;i++) if($i==".") print $0}'
+
+# Indexing 
+bcftools index DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.vcf.gz
+--------------- END OF INTERACTIVE SESSION --------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3592455 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# 18_geno_20kbthin_onlyLMUF.sh
+------------- START OF THE SCRIPT 1 --------------------------------------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J geno_20kbthin_LMUF
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/NeigbourNet/geno_20kbthin_onlyLMUF_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/NeigbourNet/geno_20kbthin_onlyLMUF_%j.err
+#SBATCH -t 04:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --mem=50G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+# Contains freebayes=1.3.6 htslib=1.16 python=3.10 numpy scipy samtools=1.16.1
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/freebayes_updated.env
+
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/NeigbourNet
+
+VCFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+FILTVCF=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.vcf.gz
+GENO=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.geno.gz
+DISTMAT=DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.fixedGT.dist
+
+echo "running parseVCF.py"
+python /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/parseVCF.py -i $VCFPATH/$FILTVCF | bgzip > $GENO &&
+
+echo "running distMat.py"
+python /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/distMat.py -g $GENO -f phased --windType cat -o $DISTMAT
+
+------------- END OF THE SCRIPT --------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3619507 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
 
