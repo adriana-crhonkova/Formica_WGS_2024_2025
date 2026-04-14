@@ -387,7 +387,7 @@ awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
 mv $OUTFILE.bim.tmp $OUTFILE.bim
 
 ------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 3618379 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 3619140 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 # 19_admixture_onlyLMUF.noPrat.noLug.noEx.sh
 ------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
@@ -426,7 +426,7 @@ done
 grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.cv.error
 
 ------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 3618382 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 3619142 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 #Download the cv.error file to local
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset4/DP8.AN10.noScaff0003.mac2.thin20kb.onlyLMUF.noPrat.noLug.noEx.cv.error .
