@@ -23,15 +23,17 @@ mkdir 04.VCF.mtDNA
 cd 04.VCF.mtDNA
 mkdir logs
 
+
+# 20.SNPcalling.mtDNA.sh
 -------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
 #!/bin/bash 
 #SBATCH -J SNPcalling.mtDNA
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.mtDNA.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.mtDNA.err
-#SBATCH -t 120:00:00
+#SBATCH -t 48:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
-#SBATCH --partition=biohpc_gen_production
+#SBATCH --partition=biohpc_gen_normal
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
@@ -65,6 +67,7 @@ freebayes-parallel \
 echo "Finished SNP calling"
 
 -------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3649568 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 #### NOT EDITED YET ####
 
