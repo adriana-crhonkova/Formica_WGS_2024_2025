@@ -74,7 +74,10 @@ salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
 mamba activate bcftools.env
 
+## Check the number of SNPs across all samples
 bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#"
+
+## Check the quality
 # output: 171
 bcftools view -v snps -i 'QUAL<30' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 123
@@ -83,21 +86,34 @@ bcftools view -v snps -i 'QUAL<20' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 bcftools view -v snps -i 'QUAL<10' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 117
 
+## Check the depth
+bcftools query -f '%CHROM\t%POS[\t%DP]\n' all_samples_mtDNA_raw.vcf \
+| awk '{
+    sum=0; n=0;
+    for(i=3;i<=NF;i++){
+        if($i!="." && $i>0){sum+=$i; n++}
+    }
+    if(n>0) print $1,$2,sum/n
+}'
+
+# output is contig name, position, Depth
+
+### try two versions - first without filtering (similar to what Patrick did) and second with filtering 
+
+------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
 
 
-#### NOT EDITED YET ####
-
-
-#161 SNPs with 38 samples
-#Since there are only 161 SNPs, we do not any additional filtering, but only sorting and compressing the VCF file in the next steps below
-
+#####################  NO FILTERING STEPS #########################################################
 ####### SORTING, COMPRESSING, AND INDEXING #####
-#Now, we sort and compress the VCF file using sineractive
-sinteractive --account project_2009316 --mem 2000
-module load biokit
-cd /scratch/project_2009316/DutchSamples/X204SC23115958-Z01-F008/07.VCF_mtDNA
 
-# In the next step we "Sort" and "compress" the VCF file in one step.
+------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+
+mamba activate bcftools.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
+
+# Sort and compress
 bcftools sort -m 1G -Oz -o all_samples_mtDNA_raw.vcf.gz -T ./tmp_sort all_samples_mtDNA_raw.vcf
 
 # Index
@@ -106,8 +122,8 @@ bcftools index -n all_samples_mtDNA_raw.vcf.gz
 
 #Extract the number of sites per mtDNA 
 gunzip -c all_samples_mtDNA_raw.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_per_mtDNA.tab
-#185
 
+## not edited yet
 
 ######### Create file for PopArt #########
 ## Next, we create a consensus sequence by by applying VCF variants to a reference fasta file using vcftools vcf-consensus scripts from
