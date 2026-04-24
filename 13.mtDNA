@@ -76,9 +76,9 @@ mamba activate bcftools.env
 
 ## Check the number of SNPs across all samples
 bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 171
 
 ## Check the quality
-# output: 171
 bcftools view -v snps -i 'QUAL<30' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 123
 bcftools view -v snps -i 'QUAL<20' all_samples_mtDNA_raw.vcf | grep -vc "^#"
@@ -119,31 +119,30 @@ bcftools sort -m 1G -Oz -o all_samples_mtDNA_raw.vcf.gz -T ./tmp_sort all_sample
 # Index
 tabix -p vcf all_samples_mtDNA_raw.vcf.gz
 bcftools index -n all_samples_mtDNA_raw.vcf.gz
+# output: 187
 
 #Extract the number of sites per mtDNA 
 gunzip -c all_samples_mtDNA_raw.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_per_mtDNA.tab
-
-## not edited yet
+# output: 187 mtDNA (means that there is 187 variant sites, some might be indels)
 
 ######### Create file for PopArt #########
 ## Next, we create a consensus sequence by by applying VCF variants to a reference fasta file using vcftools vcf-consensus scripts from
 ## https://github.com/vcftools/vcftools/blob/master/src/perl/vcf-consensus#L111
 #Note, this is a pearl script. You have to copy-paste it to a file "vcf-consensus_code.pl" and make it executable with
-chmod +x cf_consensus.pl
+chmod +x vcf-consensus_code.pl
 
-#Now, we create a sample list using 
+# create a sample list 
 bcftools query -l all_samples_mtDNA_raw.vcf.gz > samples.list
 
-#Then you can use it. I now created a forward loop, which iterates through the samples.list file and creates the consensu file. For this, you forst run sinteractive
 
-#while IFS= read -r samples; do
-#        echo $samples
-#        samtools faidx /scratch/project_2009316/refGenome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | ./vcf_consensus.pl -H 1 -s $samples Samples257_DP8.257inds.AN10.mtDNA.mac2.vcf.gz > $samples"_mtDNA".fa
-#done < samples.list
+### to be edited
+
+# forward loop, which iterates through the samples.list file and creates the consensu file
 #NOTE. -H keeps the first haplotype, -s are the samples
-
 #In one line:
-while IFS= read -r s; do samtools faidx /scratch/project_2009316/refGenome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | ./vcf_consensus.pl -H 1 -s "$s" all_samples_mtDNA_raw.vcf.gz > "${s}_mtDNA.fa"; done < samples.list
+while IFS= read -r s; do samtools faidx /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | ./vcf-consensus_code.pl -H 1 -s "$s" all_samples_mtDNA_raw.vcf.gz > "${s}_mtDNA.fa"; done < samples.list
+# doesn't work because of missing genotypes
+
 
 ###
 #After this, you will fa.files for each sample. Move these files into a folder "mtDNA_fa", which you will create using mkdir
@@ -152,6 +151,10 @@ mv *fa mtDNA_fa/
 
 #Inside the folder, we now add all fa-files into a sample list
 ls *fa > list.samples
+
+------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+
+#### Not edited yet ####
 
 #Each fa.file starts with ">mtDNA", but we want to have them all stored in one fasta-file with the sample ID.
 # To do this, we create a new script, "mafft.sh". This script, first, re-names the first line in each fasta file with the sample ID (e.g. from >mtDNA to >1-Fprat).
