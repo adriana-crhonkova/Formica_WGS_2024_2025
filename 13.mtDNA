@@ -69,6 +69,22 @@ echo "Finished SNP calling"
 -------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3649568 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+
+mamba activate bcftools.env
+
+bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 171
+bcftools view -v snps -i 'QUAL<30' all_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 123
+bcftools view -v snps -i 'QUAL<20' all_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 121
+bcftools view -v snps -i 'QUAL<10' all_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 117
+
+
+
 #### NOT EDITED YET ####
 
 
