@@ -4,7 +4,7 @@
 # For this, we nwill use again freebayes and need a "regions_mtDNA.txt" file with only the mtDNA region in it for the SNP calling
 
 ------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=8G
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 04:00:00 --mem=2G
 
 #modify regions file so that Freebayes accepts it
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
@@ -15,9 +15,9 @@ grep -v -e wFhyb -e Spiroplasma -e Scaffold00 Formica_hybrid_v1_5e6_data_regions
 grep -e mtDNA Formica_hybrid_v1_5e6_data_regions_wmtDNA.txt > regions_mtDNA.txt
 
 ------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3649566 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 ##### Call SNPs #####
-# Now, we create a new folder called "07.VCF_mtDNA"
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/
 mkdir 04.VCF.mtDNA
 cd 04.VCF.mtDNA
@@ -44,7 +44,6 @@ set -eo pipefail
 eval "$(mamba shell hook --shell bash)"
 mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/freebayes_updated.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF
 REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
 RES=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
 BAM=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
