@@ -72,7 +72,7 @@ sacct -M biohpc_gen -j 3649568 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 ------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
-mamba activate bcftools.env
+mamba activate mafft.env
 
 ## Check the number of SNPs across all samples
 bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#"
@@ -98,9 +98,131 @@ bcftools query -f '%CHROM\t%POS[\t%DP]\n' all_samples_mtDNA_raw.vcf \
 
 # output is contig name, position, Depth
 
-### try two versions - first without filtering (similar to what Patrick did) and second with filtering 
+# Might try also without filtering and compare the results
+##### FILTERING OF mtDNA ######
 
-------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+# Filter for QUAL >= 30 and keep only SNPs
+bcftools view -v snps -i 'QUAL>=30' all_samples_mtDNA_raw.vcf -O z -o all_samples_mtDNA_filtered.vcf.gz
+
+# Index the new file 
+bcftools index all_samples_mtDNA_filtered.vcf.gz
+
+## Check the number of SNPs across all samples
+bcftools view -v snps all_samples_mtDNA_filtered.vcf.gz | grep -vc "^#"
+# output 48
+
+## Check the number of samples
+bcftools query -l all_samples_mtDNA_filtered.vcf.gz | wc -l
+# output: 193
+
+# Checking the stats of retained SNPs
+bcftools stats -s - all_samples_mtDNA_filtered.vcf.gz | grep "^PSC"
+
+## saving the stats in a file
+# Add a header row first, then append the parsed columns
+echo -e "Sample_ID\tnRefHom\tnNonRefHom\tnHets\tnTransitions\tnTransversions\tnMissing" > sample_mtDNA_qc_stats.txt
+# run the stats
+bcftools stats -s - all_samples_mtDNA_filtered.vcf.gz | grep "^PSC" | awk '{print $3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$14}' >> sample_mtDNA_qc_stats.txt
+
+
+
+## As the perl script did not work for me, I switched to bcftools consensus
+
+# Run the loop using samtools faidx to isolate ONLY the mtDNA region
+while IFS= read -r s; do
+    samtools faidx /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | \
+    bcftools consensus -s "$s" -I all_samples_mtDNA_filtered.vcf.gz > "${s}_mtDNA.fa"
+    
+    # Clean up the fasta header so it is just the sample name
+    sed -i "s/>.*/>${s}/" "${s}_mtDNA.fa"
+done < samples.list
+
+mkdir mtDNA_fa
+mv *fa mtDNA_fa
+
+------------------- END OF INTERACTIVE JOB --------------------------------------------------------------------------------------------------------------------------
+21.alignment_mtDNA.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J alignment_mtDNA
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/alignment_mtDNA.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/alignment_mtDNA.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mafft.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa
+
+echo "Combining FASTA files"
+# Concatenate all sample FASTAs into one file
+cat *.fa > all_mtDNAsamples.fa
+
+echo "Alignment"
+# alignment
+## --thread -1 tells MAFT to use all allocated CPUs
+## --anysymbol accept any valid text character which could occur because of missing data
+mafft --anysymbol --thread -1 all_mtDNAsamples.fa > all_mtDNAsamples_aligned.fa
+
+echo "DONE" 
+
+-------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3948711 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
+------------ ---------- ---------- ---------- ---------- --------
+3948711        00:00:24                     4  COMPLETED      0:0
+3948711.bat+   00:00:24                     4  COMPLETED      0:0
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa/all_mtDNAsamples_aligned.fa .
+# popart needs different format
+
+# https://github.com/josephhughes/Sequence-manipulation/blob/master/Fasta2Nexus.pl
+# copying the script to transform fasta file into nexus file
+
+touch Fasta2NEXUS.pl
+vi Fasta2NEXUS.pl # copy the code
+
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
+mamba activate mafft.env
+
+perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa/all_mtDNAsamples_aligned.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa/all_mtDNAsamples_aligned.nex
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa/all_mtDNAsamples_aligned.nex .
+
+
+# Popart was downloaded from https://popart.maths.otago.ac.nz/download/
+## Popart workflow
+# File > Open > all_mtDNAsamples_aligned.nex
+### Epsilon value = 0
+# Network > Minimum spanning network
+# File > Export Graphics
+# Network > Median joining network
+# File > Export Graphics
+# Statistics > Identical Sequences > Log to file? > Yes
+# Statistics > All stats > Log to file? > Yes
+
+# there should be a way how to add matedata to colour the nodes
+
+
+
+
+
+
+
+
 
 
 #####################  NO FILTERING STEPS #########################################################
@@ -154,52 +276,7 @@ ls *fa > list.samples
 
 ------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
 
-#### Not edited yet ####
-
-#Each fa.file starts with ">mtDNA", but we want to have them all stored in one fasta-file with the sample ID.
-# To do this, we create a new script, "mafft.sh". This script, first, re-names the first line in each fasta file with the sample ID (e.g. from >mtDNA to >1-Fprat).
-#Second, it cats all fasta-files into one file (all38_mtDNAsamples.fa).
-#Third, it aligns the files using mafft with the output: all38_mtDNAsamples_aligned.fa
-#See information of mafft under:
-#Note: https://mafft.cbrc.jp/alignment/software/anysymbol.html
-#Note: https://www.ebi.ac.uk/jdispatcher/msa/mafft?stype=dna
-#Note: I used --anysymbol to make sure that unusual characters such as U, #, . are scored as unknown
-#For consistency, the script is below:
-
-########################## Start mafft.sh script ####################
-#!/bin/bash -l
-#SBATCH -J Align_mtDNA
-#SBATCH -o /scratch/project_2009316/DutchSamples/X204SC23115958-Z01-F008/07.VCF_mtDNA/Align_mtDNA.out
-#SBATCH -e /scratch/project_2009316/DutchSamples/X204SC23115958-Z01-F008/07.VCF_mtDNA/Align_mtDNA.err
-#SBATCH --account=project_2009316
-#SBATCH -t 00:00:30
-#SBATCH -p small
-#SBATCH --ntasks 1
-#SBATCH --mem=4G
-#SBATCH --mail-type=BEGIN,END,FAIL
-
-module load biokit
-
-#First, we re-name the first line in each file
-while IFS= read -r file; do
-    # Extract the filename (without path if there's a directory)
-    filename=$(basename "$file")
-
-    # Replace the first line with ">sampleName: filename"
-    sed -i "1s/.*/>sampleName: $filename/" "$file"
-
-    echo "Replaced first line of $file with >sampleName: $filename"
-done < samples.txt
-
-
-#Second, we cat all samples together
-cat *.fa > all38_mtDNAsamples.fa
-
-#Third, we use mafft to align the samples
-mafft --anysymbol all38_mtDNAsamples.fa > all38_mtDNAsamples_aligned.fa
-
-#End script
-
+# Popart file preparation
 
 ##############
 #Now, we download the file locally to plot it in PopArt. PopArt needs a phylip format, while the data format is mafft.
