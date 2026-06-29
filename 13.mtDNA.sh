@@ -72,13 +72,13 @@ sacct -M biohpc_gen -j 3649568 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 ------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
-mamba activate mafft.env
+mamba activate bcftools.env
 
 ## Check the number of SNPs across all samples
 bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 171
 
-## Check the quality
+## Check the quality (Quality 30 = 1 in 1,000 chance that the variant call is wrong; Quality 20 = 1 in 100, Quality 10 = 1 in 10)
 bcftools view -v snps -i 'QUAL<30' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 123
 bcftools view -v snps -i 'QUAL<20' all_samples_mtDNA_raw.vcf | grep -vc "^#"
@@ -86,7 +86,7 @@ bcftools view -v snps -i 'QUAL<20' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 bcftools view -v snps -i 'QUAL<10' all_samples_mtDNA_raw.vcf | grep -vc "^#"
 # output: 117
 
-## Check the depth
+## Check the tepth per site
 bcftools query -f '%CHROM\t%POS[\t%DP]\n' all_samples_mtDNA_raw.vcf \
 | awk '{
     sum=0; n=0;
@@ -94,12 +94,35 @@ bcftools query -f '%CHROM\t%POS[\t%DP]\n' all_samples_mtDNA_raw.vcf \
         if($i!="." && $i>0){sum+=$i; n++}
     }
     if(n>0) print $1,$2,sum/n
-}'
+}' > average_depth_per_position.txt
 
 # output is contig name, position, Depth
 
-# Might try also without filtering and compare the results
-##### FILTERING OF mtDNA ######
+## Check the depth per site with only SNP
+bcftools query -v snps -f '%CHROM\t%POS[\t%DP]\n' all_samples_mtDNA_raw.vcf \
+| awk 'BEGIN{OFS="\t"} {
+    sum=0; n=0;
+    for(i=3;i<=NF;i++){
+        if($i!="." && $i>0){sum+=$i; n++}
+    }
+    if(n>0) print $1,$2,sum/n
+}' > average_snp_depth_per_position.tsv
+# output: 154 lines
+# the output have less lines then the output of bcftools view -v snps all_samples_mtDNA_raw.vcf | grep -vc "^#" (output: 171)
+
+## bcftools stats
+# Add a header row first, then append the parsed columns
+echo -e "Sample_ID\tnRefHom\tnNonRefHom\tnHets\tnTransitions\tnTransversions\tnMissing" > sample_mtDNA_qc_stats_nofilt.txt
+# run the stats
+bcftools stats -s - all_samples_mtDNA_raw.vcf.gz | grep "^PSC" | awk '{print $3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$14}' >> sample_mtDNA_qc_stats_nofilt.txt
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/average_depth_per_position.txt .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/average_snp_depth_per_position.tsv .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/sample_mtDNA_qc_stats_nofilt.txt .
+
+
+# A)
+################################ FILTERING OF mtDNA SNPs by Quality ############################################################################################
 
 # Filter for QUAL >= 30 and keep only SNPs
 bcftools view -v snps -i 'QUAL>=30' all_samples_mtDNA_raw.vcf -O z -o all_samples_mtDNA_filtered.vcf.gz
@@ -124,6 +147,7 @@ echo -e "Sample_ID\tnRefHom\tnNonRefHom\tnHets\tnTransitions\tnTransversions\tnM
 # run the stats
 bcftools stats -s - all_samples_mtDNA_filtered.vcf.gz | grep "^PSC" | awk '{print $3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$14}' >> sample_mtDNA_qc_stats.txt
 
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/sample_mtDNA_qc_stats.txt .
 
 
 ## As the perl script did not work for me, I switched to bcftools consensus
@@ -137,8 +161,8 @@ while IFS= read -r s; do
     sed -i "s/>.*/>${s}/" "${s}_mtDNA.fa"
 done < samples.list
 
-mkdir mtDNA_fa
-mv *fa mtDNA_fa
+mkdir mtDNA_fa_filt
+mv *fa mtDNA_fa_filt
 
 ------------------- END OF INTERACTIVE JOB --------------------------------------------------------------------------------------------------------------------------
 21.alignment_mtDNA.sh
@@ -163,7 +187,7 @@ set -eo pipefail
 eval "$(mamba shell hook --shell bash)"
 mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mafft.env
 
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/mtDNA_fa_filt
 
 echo "Combining FASTA files"
 # Concatenate all sample FASTAs into one file
@@ -219,12 +243,7 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 
 
 
-
-
-
-
-
-
+# B)
 #####################  NO FILTERING STEPS #########################################################
 ####### SORTING, COMPRESSING, AND INDEXING #####
 
