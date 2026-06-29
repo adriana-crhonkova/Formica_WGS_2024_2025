@@ -69,5 +69,12 @@ mamba install -c conda-forge -c bioconda samtools bcftools mafft
 mamba install -c conda-forge -c bioconda perl-bioperl
 # mafft v7.526
 # samtools v0.1.19
-# bcftools v1.23.1
+# bcftools v1.23.1 (from some reason it doesn't work)
 # perl-bioperl v1.7.8
+
+# SAMTOOLS environment (needed for quality control while troubleshooting mtDNA script)
+mamba create -p /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/samtools.env
+mamba activate samtools.env
+mamba install -c conda-forge -c bioconda samtools=1.23
+
+
