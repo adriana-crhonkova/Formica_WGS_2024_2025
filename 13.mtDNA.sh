@@ -240,67 +240,7 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 
 # there should be a way how to add matedata to colour the nodes
 
-
-
-
-# B)
-#####################  NO FILTERING STEPS #########################################################
-####### SORTING, COMPRESSING, AND INDEXING #####
-
-------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
-
-mamba activate bcftools.env
-
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
-
-# Sort and compress
-bcftools sort -m 1G -Oz -o all_samples_mtDNA_raw.vcf.gz -T ./tmp_sort all_samples_mtDNA_raw.vcf
-
-# Index
-tabix -p vcf all_samples_mtDNA_raw.vcf.gz
-bcftools index -n all_samples_mtDNA_raw.vcf.gz
-# output: 187
-
-#Extract the number of sites per mtDNA 
-gunzip -c all_samples_mtDNA_raw.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_per_mtDNA.tab
-# output: 187 mtDNA (means that there is 187 variant sites, some might be indels)
-
-######### Create file for PopArt #########
-## Next, we create a consensus sequence by by applying VCF variants to a reference fasta file using vcftools vcf-consensus scripts from
-## https://github.com/vcftools/vcftools/blob/master/src/perl/vcf-consensus#L111
-#Note, this is a pearl script. You have to copy-paste it to a file "vcf-consensus_code.pl" and make it executable with
-chmod +x vcf-consensus_code.pl
-
-# create a sample list 
-bcftools query -l all_samples_mtDNA_raw.vcf.gz > samples.list
-
-
-### to be edited
-
-# forward loop, which iterates through the samples.list file and creates the consensu file
-#NOTE. -H keeps the first haplotype, -s are the samples
-#In one line:
-while IFS= read -r s; do samtools faidx /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | ./vcf-consensus_code.pl -H 1 -s "$s" all_samples_mtDNA_raw.vcf.gz > "${s}_mtDNA.fa"; done < samples.list
-# doesn't work because of missing genotypes
-
-
-###
-#After this, you will fa.files for each sample. Move these files into a folder "mtDNA_fa", which you will create using mkdir
-mkdir mtDNA_fa
-mv *fa mtDNA_fa/
-
-#Inside the folder, we now add all fa-files into a sample list
-ls *fa > list.samples
-
-------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
-
-# Popart file preparation
-
-##############
-#Now, we download the file locally to plot it in PopArt. PopArt needs a phylip format, while the data format is mafft.
-scp krapfpat@puhti.csc.fi:/scratch/project_2009316/DutchSamples/X204SC23115958-Z01-F008/07.VCF_mtDNA/mtDNA_fa/all38_mtDNAsamples_aligned.fa ./ 
-
+############################# FROM PATRICK #################################################################################################
 
 ##WORK IN PROGRESS BELOW
 #So, we need to change the format manually using the perl script "Fasta2Phylip.pl" from https://indra.mullins.microbiol.washington.edu/perlscript/docs/Sequence.html
@@ -335,4 +275,69 @@ AQU,LUG,RUF,POL,PRA,HYB1,HYB2,HYB3
 #We can load both files into PopArt. First the phylip-alignment, then the trait file. Do NOT delete the alignment when loading the file.
 #First run the minimum and then the median spanning network
 
-##END
+#####################################################################################################################################################
+
+### Troubleshooting
+
+# After noticing that some samples in "sample_mtDNA_qc_stats_nofilt.txt" and "sample_mtDNA_qc_stats.txt" (filtered Q>30) have 0 variants.
+# As a follow-up, I checked a representative of a bad sample (LMUF_00341c) and of a good sample (LMUF_00206a) final bam file in IGV (Interactive genome viewer).
+# There was clearly visible that the coverage breath for mtDNA scaffold in LMUF_00341c is very poor in comparison with LMUF_00206a. 
+  # note: LMUF_00206a is from the merged batch of sequencing
+# Therefore, I am going to do quality control again of bam files with focus on mtDNA. Before, I used mosdepth summary for coverage calculation accross all samples. 
+
+# going back to mosdepth statistics
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage
+# find lines with mtDNA in mosdepth summary files and prints them to one file (non-clipped overlaps)
+grep -Hw "mtDNA" *merged.mosdepth.summary.txt > combined_mtDNA_summary.txt
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/stats/coverage/combined_mtDNA_summary.txt .
+
+### Running samtools coverage on all bam files (also the reference samples)
+# 22_bam_mtDNA_qc.sh
+---------------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J bam_mtDNA_qc
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/logs/bam_mtDNA_qc.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/logs/bam_mtDNA_qc.err
+#SBATCH -t 02:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/samtools.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+
+echo "START"
+
+# Print the header first
+echo -e "Sample\trname\tstartpos\tendpos\tnumreads\tcovbases\tcoverage\tmeandepth\tmeanbaseq\tmeanmapq" > mtdna_coverage_summary.txt
+
+echo "Running samtools coverage"
+
+while IFS= read -r bam_path; do
+    [ -z "$bam_path" ] && continue
+    sample_name=$(basename "$bam_path" | cut -d'.' -f1)
+    stats=$(samtools coverage -r mtDNA "$bam_path" | grep -v '^#')
+    if [ ! -z "$stats" ]; then
+        echo -e "${sample_name}\t${stats}" >> mtdna_coverage_summary.txt
+    else
+        echo -e "${sample_name}\tmtDNA_not_found_or_empty" >> mtdna_coverage_summary.txt
+    fi
+done < all.bam.list
+
+echo "FINISHED"
+
+---------------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3990612 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+
+
+
