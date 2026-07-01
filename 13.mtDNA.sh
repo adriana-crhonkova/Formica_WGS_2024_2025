@@ -337,7 +337,14 @@ echo "FINISHED"
 ---------------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 3990612 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
+------------ ---------- ---------- ---------- ---------- --------
+3990612        00:01:42                     1  COMPLETED      0:0
+3990612.bat+   00:01:42     10880K          1  COMPLETED      0:0
 
+# the wall time can be reduced next time
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final/mtdna_coverage_summary.txt .
 
 
 
