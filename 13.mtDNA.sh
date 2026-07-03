@@ -347,4 +347,215 @@ sacct -M biohpc_gen -j 3990612 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final/mtdna_coverage_summary.txt .
 
 
+# Based on the samtools coverage statistics ("mtdna_coverage_summary.txt") I set a threshold of coverage breadth >70, depth >15X. 
+# I filtered out 36 samples, all of them were sequenced in the batch Formica_2025 (only sequenced once). 
+# Only sample from this batch which passed the filters was LMUF_00118c with coverage breadth 71.1283, depth 178.853.
+# no sample from the merged batches of 2024 samples were filtered out, neither any of the reference samples. Seems there was some issue with library prep?
+
+##### SNP calling with filtered dataset
+# directory with bam files
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+touch remove_samples.txt
+vi remove_samples.txt # paste the names of samples to be filtered
+# remove the samples and save into "filtered.bam.list"
+grep -v -F -f remove_samples.txt all.bam.list > filtered.bam.list
+# Sanity check: 193 (lines in all.bam.list) - 157 (lines in filtered.bam.list) = 36 (number of samples which should be filtered)
+
+
+# 23.SNPcalling.filt.mtDNA.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J SNPcalling.filt.mtDNA
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.filt.mtDNA.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.filt.mtDNA.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=10G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/freebayes_updated.env
+
+REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
+RES=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
+BAM=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+
+echo "Started SNP calling"
+
+freebayes-parallel \
+  $REF/regions_mtDNA.txt \
+  $SLURM_CPUS_PER_TASK \
+  -f $REF/Formica_hybrid_v1_wFhyb_Sapis.fa \
+  -L $BAM/filtered.bam.list \
+  -k \
+  --ploidy 1 \
+  --genotype-qualities \
+  --skip-coverage 15200 \
+  --limit-coverage 100 \
+  --use-best-n-alleles 3 \
+  > "$RES/filt_samples_mtDNA_raw.vcf"
+
+echo "Finished SNP calling"
+
+-------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3994915 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
+------------ ---------- ---------- ---------- ---------- --------
+3994915        00:01:19                    16  COMPLETED      0:0
+3994915.bat+   00:01:19   6184456K         16  COMPLETED      0:0
+
+
+
+------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+
+mamba activate bcftools.env
+
+# Check the number of variants
+grep -vc "^#" filt_samples_mtDNA_raw.vcf
+# output: 187
+
+## Check the number of SNPs across all samples
+bcftools view -v snps filt_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 171
+
+## Check the quality (Quality 30 = 1 in 1,000 chance that the variant call is wrong; Quality 20 = 1 in 100, Quality 10 = 1 in 10)
+bcftools view -v snps -i 'QUAL<30' filt_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 124
+bcftools view -v snps -i 'QUAL<20' filt_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 123
+bcftools view -v snps -i 'QUAL<10' filt_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 123
+
+## Check the depth per site
+bcftools query -f '%CHROM\t%POS[\t%DP]\n' filt_samples_mtDNA_raw.vcf \
+| awk '{
+    sum=0; n=0;
+    for(i=3;i<=NF;i++){
+        if($i!="." && $i>0){sum+=$i; n++}
+    }
+    if(n>0) print $1,$2,sum/n
+}' > average_depth_per_position_filt.txt
+
+# output is contig name, position, Depth
+
+## bcftools stats
+# Create a header
+echo -e "Sample_ID\tnHapRef\tnHapAlt\tnMissing" > filt_samples_mtDNA_qc_stats.txt
+
+# Get the haploid columns ($12, $13, and $14)
+bcftools stats -s - filt_samples_mtDNA_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> filt_samples_mtDNA_qc_stats.txt
+------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_qc_stats.txt .
+
+# Some samples have high amount of missing sites after SNP filtering (RN417 have 187 missing sites out of 187 sites - 100% missingness)
+
+------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+mamba activate bcftools.env
+
+bcftools query -f '[%SAMPLE\t%F_MISSING\n]' filt_samples_mtDNA_raw.vcf | sort -u > sample_missingness.txt
+
+# check the number of samples passing various thresholds
+for threshold in 0.10 0.20 0.30 0.50; do
+    remaining=$(awk -v t="$threshold" '$3 <= t {count++} END {print count+0}' sample_missingness.txt)
+    # Use awk to calculate the clean percentage (e.g., 0.10 -> 10%)
+    percent=$(awk -v t="$threshold" 'BEGIN {print t*100}')
+    echo -e "<= ${percent}%\t\t\t${remaining}"
+done
+
+## Thresholds of maximal missingness
+# 10%                  18
+# 20%                  54
+# 30%                  74
+# 50%                  140
+
+# at 50% threshld, only 17 samples will be filtered out
+
+# make a list of samples to keep
+awk '$3 < 0.50 {print $1}' sample_missingness.txt > samples_to_keep.txt
+# sanity check: 140 lines
+
+# filter vcf file
+bcftools view -S samples_to_keep.txt filt_samples_mtDNA_raw.vcf > filt_samples_mtDNA_VCFfilt.vcf
+
+
+####### SORTING, COMPRESSING, AND INDEXING #####
+
+# In the next step we "Sort" and "compress" the VCF file in one step.
+bcftools sort -m 1G -Oz -o filt_samples_mtDNA_VCFfilt.vcf.gz -T ./tmp_sort filt_samples_mtDNA_VCFfilt.vcf
+
+# Index
+tabix -p vcf filt_samples_mtDNA_VCFfilt.vcf.gz
+bcftools index -n filt_samples_mtDNA_VCFfilt.vcf.gz
+
+
+# Run the loop using samtools faidx to isolate ONLY the mtDNA region
+while IFS= read -r s; do
+    samtools faidx /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/Formica_hybrid_v1_wFhyb_Sapis.fa mtDNA | \
+    bcftools consensus -s "$s" -I filt_samples_mtDNA_VCFfilt.vcf.gz > "${s}_mtDNA.fa"
+    
+    # Clean up the fasta header so it is just the sample name
+    sed -i "s/>.*/>${s}/" "${s}_mtDNA.fa"
+done < samples_to_keep.txt
+
+mkdir filt_samples_mtDNA_fa
+mv *fa filt_samples_mtDNA_fa
+
+------------------- END OF INTERACTIVE JOB --------------------------------------------------------------------------------------------------------------------------
+24_filt.alignment_mtDNA.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J filt.alignment_mtDNA
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mafft.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa
+
+echo "Combining FASTA files"
+# Concatenate all sample FASTAs into one file
+cat *.fa > filt_mtDNAsamples.fa
+
+echo "Alignment"
+# alignment
+## --thread -1 tells MAFT to use all allocated CPUs
+## --anysymbol accept any valid text character which could occur because of missing data
+mafft --anysymbol --thread -1 filt_mtDNAsamples.fa > filt_mtDNAsamples_aligned.fa
+
+echo "DONE" 
+
+-------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 3995659 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
+mamba activate mafft.env
+
+perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.nex
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.nex .
 
