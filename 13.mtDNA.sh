@@ -486,8 +486,8 @@ awk '$3 < 0.50 {print $1}' sample_missingness.txt > samples_to_keep.txt
 # sanity check: 140 lines
 
 # filter vcf file
-bcftools view -S samples_to_keep.txt filt_samples_mtDNA_raw.vcf > filt_samples_mtDNA_VCFfilt.vcf
-
+bcftools view -S samples_to_keep.txt filt_samples_mtDNA_raw.vcf | \
+bcftools view -v snps -m2 -M2 -c 1 > filt_samples_mtDNA_VCFfilt.vcf
 
 ####### SORTING, COMPRESSING, AND INDEXING #####
 
@@ -497,6 +497,7 @@ bcftools sort -m 1G -Oz -o filt_samples_mtDNA_VCFfilt.vcf.gz -T ./tmp_sort filt_
 # Index
 tabix -p vcf filt_samples_mtDNA_VCFfilt.vcf.gz
 bcftools index -n filt_samples_mtDNA_VCFfilt.vcf.gz
+# output: 50 biallelic sites
 
 
 # Run the loop using samtools faidx to isolate ONLY the mtDNA region
@@ -549,7 +550,7 @@ mafft --anysymbol --thread -1 filt_mtDNAsamples.fa > filt_mtDNAsamples_aligned.f
 echo "DONE" 
 
 -------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 3995659 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 3995824 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
@@ -557,5 +558,8 @@ mamba activate mafft.env
 
 perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.nex
 
+# check the alignment in Jalview
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.fa .
+# use in popart to build the network
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.nex .
 
