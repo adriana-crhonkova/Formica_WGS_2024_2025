@@ -563,3 +563,34 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 # use in popart to build the network
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa/filt_mtDNAsamples_aligned.nex .
 
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Probable issue with the SNP calling: using Patrick's --skip-coverage threshold, which was calculated for much less samples
+# I used for nuclear DNA SNP calling following parameters
+# --skip-coverage was calculated as: 193 samples, max coverage across all samples 46.4X -> 46.4*193=8955.2 -> --skip-coverage 10000 will only skip super high-depth artifacts
+# using the same logic: 193 samples, max coverage across mtDNA of all samples 5874X -> 5874*193=1,133,682 -> --skip-coverage 1200000????
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
