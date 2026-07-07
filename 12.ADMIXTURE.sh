@@ -529,3 +529,101 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset5/DP8.AN10.noScaff0003.mac2.thin20kb.Faq.Fru.Fpol.fam .
 
 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+### Dataset 6
+# removing samples from Russia and Scotland + F. exsecta samples + undetermined ref. samples
+# 115-Flug (Russia), Lai_1w, Lai_2w, Loa_1w (Scotland), RN415, RN416, RN417, RN418, RN419, RN420, RN421, RN422, RN423, RN424, RN425, RN426, s353, s354 (undetermined samples)
+# LMUF_00011a, LMUF_00030a, LMUF_00034a, LMUF_00427b
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+cp remove_samples_sorted.txt remove_samples_D6.txt # this file contains samples which were removed because of high missingness
+vi remove_samples_D6.txt # add sample names which should be filtered out
+sort remove_samples_D6.txt > remove_samples_D6_sorted.txt
+sort ind.list > ind.list.sorted
+grep -v -F -f remove_samples_D6_sorted.txt ind.list.sorted > ind_list_D6 # 168 lines
+# SANITY CHECK: ind.list.sorted (193) - remove_samples_D6_sorted.txt (25) = ind_list_D6 (168) 
+
+
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 01:00:00 --mem=2G --cpus-per-task=4
+--------- INTERACTIVE JOB -----------------------------------------------------------------------------------
+
+mamba activate admixure.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
+
+# Convert the VCF into PLINK format for ADMIXTURE analysis and keep only the desired individuals (in "LIST")
+cp ind_list_D6 /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6/ind_list_D6.txt
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6
+awk '{print $1, $1}' ind_list_D6.txt > ind_list_D6.plink.txt
+
+VCF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.vcf.gz
+LIST=ind_list_D6.plink.txt
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6
+OUTFILE=DP8.AN10.noScaff0003.mac2.thin20kb.D6
+
+plink --threads 4 --vcf $VCF --make-bed \
+--double-id --allow-extra-chr --set-missing-var-ids @:# \
+--keep $OUTPATH/$LIST \
+--out $OUTPATH/$OUTFILE
+
+# ADMIXTURE doesn't accept non-human chromosome names. Replace the first column by 0.
+
+awk '{$1=0;print $0}' $OUTFILE.bim > $OUTFILE.bim.tmp
+mv $OUTFILE.bim.tmp $OUTFILE.bim
+
+------------- END OF INTERACTIVE SESSION -------------------------------------------------------------------------------------------------
+
+
+# 25_admixture_D6.sh
+------------- START OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+#!/bin/bash -l
+#SBATCH -J admixture_D6
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_D6.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/logs/admixture_D6.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 1
+#SBATCH --mem=8G
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/admixure.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6
+
+echo "Start"
+OUTPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6
+FILE=DP8.AN10.noScaff0003.mac2.thin20kb.D6
+
+for i in {2..10}
+do
+admixture --cv $OUTPATH/$FILE.bed $i > log${i}.out
+
+done
+
+grep -h CV log*.out > DP8.AN10.noScaff0003.mac2.thin20kb.D6.cv.error
+
+echo "End"
+------------ END OF THE SCRIPT -----------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4013937 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+#### EDIT THE FILE NAMES
+#Download the cv.error file to local
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6/DP8.AN10.noScaff0003.mac2.thin20kb.D6.cv.error .
+# .Q for ADMFILEs in R script; admixture proportion for K populations
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset5/DP8.AN10.noScaff0003.mac2.thin20kb.D6.*.Q .
+# .fam is from plink and it is important for list of samples in admixture
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset5/DP8.AN10.noScaff0003.mac2.thin20kb.D6.fam .
+
+
+
+
