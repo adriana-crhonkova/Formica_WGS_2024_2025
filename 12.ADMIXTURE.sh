@@ -620,10 +620,8 @@ sacct -M biohpc_gen -j 4013937 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 #Download the cv.error file to local
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6/DP8.AN10.noScaff0003.mac2.thin20kb.D6.cv.error .
 # .Q for ADMFILEs in R script; admixture proportion for K populations
-scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset5/DP8.AN10.noScaff0003.mac2.thin20kb.D6.*.Q .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6/DP8.AN10.noScaff0003.mac2.thin20kb.D6.*.Q .
 # .fam is from plink and it is important for list of samples in admixture
-scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset5/DP8.AN10.noScaff0003.mac2.thin20kb.D6.fam .
-
-
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/admixture/dataset6/DP8.AN10.noScaff0003.mac2.thin20kb.D6.fam .
 
 
