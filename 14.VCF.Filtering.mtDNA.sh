@@ -151,6 +151,14 @@ echo "DONE"
 sacct -M biohpc_gen -j 4032913 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
+mamba activate mafft.env
+
+perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa_2/filt_mtDNAsamples_aligned_2.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa_2/filt_mtDNAsamples_2_aligned.nex
+
+
+# use in popart to build the network
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_fa_2/filt_mtDNAsamples_2_aligned.nex .
 
 
 
