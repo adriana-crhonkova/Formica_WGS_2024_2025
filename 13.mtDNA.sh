@@ -571,14 +571,72 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 # using the same logic: 193 samples, max coverage across mtDNA of all samples 5874X -> 5874*193=1,133,682 -> --skip-coverage 1200000????
 
 
+# Checked scripts of Ina's paper "Semipermeable species boundaries ..." (Satokangas et. al, 2023) 
+
+# /appl/soft/bio/bioconda/miniconda3/envs/freebayes/bin/freebayes-puhti \
+#  -time 72 \
+#  -regions ref/mtDNA_50kb_regions.txt \
+#  -f ref/mtDNA_wFhyb_Sapis.fa \
+#  -L vcf/bam.list \
+#  -k --genotype-qualities --pooled-continuous -F 0.05 --ploidy 1 --min-coverage 1000 \ 
+#  -out vcf/mt_F005_C1000_all_samples_raw.vcf
 
 
 
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Here is updated SNP calling based on Ina's scripts for paper "Semipermeable species boundaries create opportunities for gene flow and adaptive potential"
+# https://zenodo.org/records/7941711?preview_file=Raw_reads_to_SNPs_scripts.zip
 
 
+# 26.SNPcalling.mtDNA.2.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J SNPcalling.filt.mtDNA.2
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.filt.mtDNA.2.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.filt.mtDNA.2.err
+#SBATCH -t 48:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
 
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
 
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/freebayes_updated.env
+
+REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
+RES=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
+BAM=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+
+echo "Started SNP calling"
+
+freebayes-parallel \
+  $REF/regions_mtDNA.txt \
+  $SLURM_CPUS_PER_TASK \
+  -f $REF/Formica_hybrid_v1_wFhyb_Sapis.fa \
+  -L $BAM/filtered.bam.list \
+  -k \
+  --genotype-qualities \
+  --pooled-continuous \
+  -F 0.05 \
+  --ploidy 1 \
+  --skip-coverage 1200000 \
+  --use-best-n-alleles 3 \
+  > "$RES/filtered_samples_mtDNA_2_raw.vcf"
+
+# removed --min-coverage 1000 \ flag, because 5 samples (even after filtering) have mean coverage depth <1000 (eg. LMUF_00118c with coverage breadth 71.1283, mean depth 178.853X, max depth 1263X).
+
+echo "Finished SNP calling"
+
+-------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4021747 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
