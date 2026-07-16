@@ -638,6 +638,53 @@ echo "Finished SNP calling"
 -------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4021747 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+       JobID    Elapsed     MaxRSS  AllocCPUS      State ExitCode
+------------ ---------- ---------- ---------- ---------- --------
+4021747        00:14:18                    16  COMPLETED      0:0
+4021747.bat+   00:14:18  65321944K         16  COMPLETED      0:0
+
+
+-------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+
+mamba activate bcftools.env
+
+# Check the number of variants
+grep -vc "^#" filtered_samples_mtDNA_2_raw.vcf
+# output: 1443
+
+## Check the number of SNPs across all samples
+bcftools view -v snps filtered_samples_mtDNA_2_raw.vcf | grep -vc "^#"
+# output: 1314
+
+## Check the quality (Quality 30 = 1 in 1,000 chance that the variant call is wrong; Quality 20 = 1 in 100, Quality 10 = 1 in 10)
+bcftools view -v snps -i 'QUAL<30' filtered_samples_mtDNA_2_raw.vcf | grep -vc "^#"
+# output: 608
+
+
+## Check the depth per site
+bcftools query -f '%CHROM\t%POS[\t%DP]\n' filtered_samples_mtDNA_2_raw.vcf \
+| awk '{
+    sum=0; n=0;
+    for(i=3;i<=NF;i++){
+        if($i!="." && $i>0){sum+=$i; n++}
+    }
+    if(n>0) print $1,$2,sum/n
+}' > average_depth_per_position_filt_2.txt
+
+# output is contig name, position, Depth
+
+## bcftools stats
+# Create a header
+echo -e "Sample_ID\tnHapRef\tnHapAlt\tnMissing" > filt_samples_mtDNA_2_qc_stats.txt
+
+# Get the haploid columns ($12, $13, and $14)
+bcftools stats -s - filtered_samples_mtDNA_2_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> filt_samples_mtDNA_2_qc_stats.txt
+
+-------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_2_qc_stats.txt .
+
+
 
 
 
