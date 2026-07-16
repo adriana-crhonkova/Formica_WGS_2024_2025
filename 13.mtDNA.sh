@@ -1,3 +1,6 @@
+#### !!!!!!!!!!!!!  WORK IN PROGRESS !!!!!!!!!!!!
+# So far the best version seems to be the last one (line ~595)
+
 ### This script is edited from the one made by Patrick Krapf (based on Ina Satokangas?)
 
 # Below, we will first call SNPs from the mitochonrial part of the WGS only
@@ -649,6 +652,8 @@ salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
 
 mamba activate bcftools.env
 
+####### Quality Check #######
+
 # Check the number of variants
 grep -vc "^#" filtered_samples_mtDNA_2_raw.vcf
 # output: 1443
@@ -681,18 +686,22 @@ echo -e "Sample_ID\tnHapRef\tnHapAlt\tnMissing" > filt_samples_mtDNA_2_qc_stats.
 # Get the haploid columns ($12, $13, and $14)
 bcftools stats -s - filtered_samples_mtDNA_2_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> filt_samples_mtDNA_2_qc_stats.txt
 
+####### SORTING, COMPRESSING, AND INDEXING #####
+
+# In the next step we "Sort" and "compress" the VCF file in one step.
+bcftools sort -m 1G -Oz -o filtered_samples_mtDNA_2_raw.vcf.gz -T ./tmp_sort filtered_samples_mtDNA_2_raw.vcf
+
+# Index
+tabix -p vcf filtered_samples_mtDNA_2_raw.vcf.gz
+bcftools index -n filtered_samples_mtDNA_2_raw.vcf.gz
+# 1443 
+
+#Extract the number of sites per mtDNA 
+gunzip -c filtered_samples_mtDNA_2_raw.vcf.gz | grep -v "^#" | cut -f 1 | uniq -c > site_count_per_mtDNA_2.tab
+# 1443 
+
 -------------------- END OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/filt_samples_mtDNA_2_qc_stats.txt .
-
-
-
-
-
-
-
-
-
-
 
 
 
