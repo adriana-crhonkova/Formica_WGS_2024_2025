@@ -269,7 +269,7 @@ bcftools index -n LMUF_samples_mtDNA_norm.SnpGap_2.NonSNP.Balance.PASS.decompose
 echo "DONE"
 
 ------------- END OF THE SCRIPT ---------------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4052197 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4052665 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 # less wall time 
 
 ____________________________________________________________________________________________________________________________________________________________________
