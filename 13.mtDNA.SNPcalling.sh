@@ -307,7 +307,7 @@ ________________________________________________________________________________
 # Quality Control of called SNPs
 
 -------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:10:00 --mem=2G
 
 mamba activate bcftools.env
 
@@ -315,15 +315,15 @@ mamba activate bcftools.env
 
 # Check the number of variants
 grep -vc "^#" LMUF_samples_mtDNA_raw.vcf
-# output: 957
+# output: 447
 
 ## Check the number of SNPs across all samples
 bcftools view -v snps LMUF_samples_mtDNA_raw.vcf | grep -vc "^#"
-# output: 798
+# output: 404
 
 ## Check the quality (Quality 30 = 1 in 1,000 chance that the variant call is wrong; Quality 20 = 1 in 100, Quality 10 = 1 in 10)
 bcftools view -v snps -i 'QUAL<30' LMUF_samples_mtDNA_raw.vcf | grep -vc "^#"
-# output: 273
+# output: 147
 
 ## Check the depth per site
 bcftools query -f '%CHROM\t%POS[\t%DP]\n' LMUF_samples_mtDNA_raw.vcf \
@@ -353,7 +353,7 @@ bcftools sort -m 1G -Oz -o LMUF_samples_mtDNA_raw.vcf.gz -T ./tmp_sort LMUF_samp
 # Index
 tabix -p vcf LMUF_samples_mtDNA_raw.vcf.gz
 bcftools index -n LMUF_samples_mtDNA_raw.vcf.gz
-# 957
+# 447
 
 
 
