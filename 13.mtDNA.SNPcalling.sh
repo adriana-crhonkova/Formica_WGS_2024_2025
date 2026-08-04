@@ -243,5 +243,116 @@ bcftools index -n filtered_samples_mtDNA_raw.vcf.gz
 # 1095 
 
 
+_____________________________________________________________________________________________________________________________________________________________
+## DATASET 2
+# Running all LMUF samples without references
+
+# prepare list of LMUF samples
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+grep -v "Ref" all.bam.list > LMUF.list
+
+# 89 samples, max coverage across mtDNA of all samples 5874X -> 5874*89=522 786 -> --skip-coverage 550000
+# 32.SNPcalling.mtDNA.LMUF.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J SNPcalling.mtDNA.LMUF
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.mtDNA.LMUF.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/SNPcalling.mtDNA.LMUF.out
+#SBATCH -t 00:45:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/freebayes_updated.env
+
+REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
+RES=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA
+BAM=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final
+
+echo "Started SNP calling"
+
+freebayes-parallel \
+  $REF/regions_mtDNA.txt \
+  $SLURM_CPUS_PER_TASK \
+  -f $REF/Formica_hybrid_v1_wFhyb_Sapis.fa \
+  -L $BAM/LMUF.list \
+  -k \
+  --genotype-qualities \
+  --pooled-continuous \
+  -F 0.05 \
+  --ploidy 1 \
+  --skip-coverage 550000 \
+  --use-best-n-alleles 3 \
+  > "$RES/LMUF_samples_mtDNA_raw.vcf"
+
+# removed --min-coverage 1000 \ flag, because 5 samples (even after filtering) have mean coverage depth <1000 (eg. LMUF_00118c with coverage breadth 71.1283, mean depth 178.853X, max depth 1263X).
+
+echo "Finished SNP calling"
+
+-------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4052192 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+___________________________________________________________________________________________________________________________________________________________________
+# Quality Control of called SNPs
+
+-------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+
+mamba activate bcftools.env
+
+####### Quality Check #######
+
+# Check the number of variants
+grep -vc "^#" LMUF_samples_mtDNA_raw.vcf
+# output: 957
+
+## Check the number of SNPs across all samples
+bcftools view -v snps LMUF_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 798
+
+## Check the quality (Quality 30 = 1 in 1,000 chance that the variant call is wrong; Quality 20 = 1 in 100, Quality 10 = 1 in 10)
+bcftools view -v snps -i 'QUAL<30' LMUF_samples_mtDNA_raw.vcf | grep -vc "^#"
+# output: 273
+
+## Check the depth per site
+bcftools query -f '%CHROM\t%POS[\t%DP]\n' LMUF_samples_mtDNA_raw.vcf \
+| awk '{
+    sum=0; n=0;
+    for(i=3;i<=NF;i++){
+        if($i!="." && $i>0){sum+=$i; n++}
+    }
+    if(n>0) print $1,$2,sum/n
+}' > average_depth_per_position_LMUF.txt
+# output is contig name, position, Depth
+mv average_depth_per_position_LMUF.txt stats/average_depth_per_position_LMUF.txt
+
+
+## bcftools stats
+# Create a header
+echo -e "Sample_ID\tnHapRef\tnHapAlt\tnMissing" > LMUF_samples_mtDNA_qc_stats.txt
+
+# Get the haploid columns ($12, $13, and $14)
+bcftools stats -s - filtered_samples_mtDNA_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> LMUF_samples_mtDNA_qc_stats.txt
+mv LMUF_samples_mtDNA_qc_stats.txt stats/LMUF_samples_mtDNA_qc_stats.txt
+####### SORTING, COMPRESSING, AND INDEXING #####
+
+# In the next step we "Sort" and "compress" the VCF file in one step.
+bcftools sort -m 1G -Oz -o LMUF_samples_mtDNA_raw.vcf.gz -T ./tmp_sort LMUF_samples_mtDNA_raw.vcf
+
+# Index
+tabix -p vcf LMUF_samples_mtDNA_raw.vcf.gz
+bcftools index -n LMUF_samples_mtDNA_raw.vcf.gz
+# 957
+
+
 
 
