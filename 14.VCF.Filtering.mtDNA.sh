@@ -198,7 +198,7 @@ ________________________________________________________________________________
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=6G
 #SBATCH --mail-user=ada.crhonkova@seznam.cz
 #SBATCH --mail-type=END,FAIL
@@ -269,14 +269,14 @@ bcftools index -n LMUF_samples_mtDNA_norm.SnpGap_2.NonSNP.Balance.PASS.decompose
 echo "DONE"
 
 ------------- END OF THE SCRIPT ---------------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4052665 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
-# less wall time 
+sacct -M biohpc_gen -j 4052686 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
 
 ____________________________________________________________________________________________________________________________________________________________________
 
 
 ------------------- START OF INTERACTIVE JOB -----------------------------------------------------------------------------------------------------------------------------------
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:30:00 --mem=2G
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:10:00 --mem=2G
 mamba activate bcftools.env
 
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/stats
@@ -308,7 +308,7 @@ mv *fa indiv_samples_mtDNA
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=4G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
 #SBATCH --mail-type=END,FAIL
@@ -335,11 +335,11 @@ mafft --anysymbol --thread -1 LMUF_mtDNAsamples.fa > LMUF_mtDNAsamples_aligned.f
 echo "DONE" 
 
 -------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4052206 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4052713 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 ________________________________________________________________________________________________________________________________________________________________
 
-salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:10:00 --mem=2G
 mamba activate mafft.env
 
 perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.nex
