@@ -284,7 +284,7 @@ freebayes-parallel \
   $REF/regions_mtDNA.txt \
   $SLURM_CPUS_PER_TASK \
   -f $REF/Formica_hybrid_v1_wFhyb_Sapis.fa \
-  -L $BAM/LMUF.list \
+  -L $BAM/LMUF.noExsecta.bam.list \
   -k \
   --genotype-qualities \
   --pooled-continuous \
@@ -299,7 +299,7 @@ freebayes-parallel \
 echo "Finished SNP calling"
 
 -------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4052192 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4052647 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 ___________________________________________________________________________________________________________________________________________________________________
 # Quality Control of called SNPs
