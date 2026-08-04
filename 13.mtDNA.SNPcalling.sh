@@ -299,8 +299,10 @@ freebayes-parallel \
 echo "Finished SNP calling"
 
 -------------------- END OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4052647 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4052648 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+
+# waiting in a queue
 ___________________________________________________________________________________________________________________________________________________________________
 # Quality Control of called SNPs
 
