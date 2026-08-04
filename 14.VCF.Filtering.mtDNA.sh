@@ -118,7 +118,7 @@ find /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtD
 31_filt.alignment_mtDNA.sh
 -------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
 #!/bin/bash 
-#SBATCH -J LMUF.alignment_mtDNA
+#SBATCH -J filt.alignment_mtDNA
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA.err
 #SBATCH -t 00:30:00
@@ -295,9 +295,58 @@ while IFS= read -r s; do
     sed -i "s/>.*/>${s}/" "${s}_mtDNA.fa"
 done < samples.list.LMUF
 
-mkdir indiv_samples_mtDNA
+
 mv *fa indiv_samples_mtDNA
 
-find /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA -maxdepth 1 -type f | wc -l
-# 140 files
+34_LMUF.alignment_mtDNA.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J LMUF.alignment_mtDNA
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/LMUF.alignment_mtDNA.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/LMUF.alignment_mtDNA.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mafft.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA
+
+echo "Combining FASTA files"
+# Concatenate all sample FASTAs into one file
+cat /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/*.fa > LMUF_mtDNAsamples.fa
+
+echo "Alignment"
+# alignment
+## --thread -1 tells MAFT to use all allocated CPUs
+## --anysymbol accept any valid text character which could occur because of missing data
+mafft --anysymbol --thread -1 LMUF_mtDNAsamples.fa > LMUF_mtDNAsamples_aligned.fa
+
+echo "DONE" 
+
+-------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4052206 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+________________________________________________________________________________________________________________________________________________________________
+
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:15:00 --mem=2G
+mamba activate mafft.env
+
+perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.fa /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.nex
+
+
+# use in popart to build the network
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.nex .
+# use as a list of samples to filter the trait file
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/samples.list.LMUF .
 
