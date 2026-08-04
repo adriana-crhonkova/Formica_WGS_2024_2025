@@ -341,7 +341,7 @@ mv average_depth_per_position_LMUF.txt stats/average_depth_per_position_LMUF.txt
 echo -e "Sample_ID\tnHapRef\tnHapAlt\tnMissing" > LMUF_samples_mtDNA_qc_stats.txt
 
 # Get the haploid columns ($12, $13, and $14)
-bcftools stats -s - filtered_samples_mtDNA_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> LMUF_samples_mtDNA_qc_stats.txt
+bcftools stats -s - LMUF_samples_mtDNA_raw.vcf | grep "^PSC" | awk '{print $3"\t"$12"\t"$13"\t"$14}' >> LMUF_samples_mtDNA_qc_stats.txt
 mv LMUF_samples_mtDNA_qc_stats.txt stats/LMUF_samples_mtDNA_qc_stats.txt
 ####### SORTING, COMPRESSING, AND INDEXING #####
 
