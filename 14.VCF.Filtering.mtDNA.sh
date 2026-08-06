@@ -279,6 +279,10 @@ ________________________________________________________________________________
 salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:10:00 --mem=2G
 mamba activate bcftools.env
 
+## Check the number of SNPs across all samples
+bcftools view -v snps LMUF_samples_mtDNA_norm.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz | grep -vc "^#"
+# output: 247
+
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/stats
 awk '{print $1}' LMUF_samples_mtDNA_qc_stats.txt > samples.list.LMUF # remove the first row "sampleID" by hand
 mv samples.list.LMUF ../samples.list.LMUF
