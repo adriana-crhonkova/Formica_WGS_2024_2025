@@ -332,7 +332,7 @@ cat /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDN
 
 echo "Alignment"
 # alignment
-## --thread -1 tells MAFT to use all allocated CPUs
+## --thread -1 tells MAFFT to use all allocated CPUs
 ## --anysymbol accept any valid text character which could occur because of missing data
 mafft --anysymbol --thread -1 LMUF_mtDNAsamples.fa > LMUF_mtDNAsamples_aligned.fa
 
@@ -353,4 +353,20 @@ perl Fasta2NEXUS.pl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/LMUF_mtDNAsamples_aligned.nex .
 # use as a list of samples to filter the trait file
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/samples.list.LMUF .
+
+________________________________________________________________________________________________________________________________________________________________________
+
+# Checking missingness
+salloc --clusters=biohpc_gen --partition=biohpc_gen_inter -t 00:10:00 --mem=2G
+mamba activate bcftools.env
+
+vcftools --gzvcf LMUF_samples_mtDNA_norm.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.vcf.gz --missing-indv --out missing
+
+
+
+
+
+
+
+
 
