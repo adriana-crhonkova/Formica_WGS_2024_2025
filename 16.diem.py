@@ -5,7 +5,7 @@
 #SBATCH --job-name=vcffilt
 #SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffilt_%j.out
 #SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffilt_%j.err
-#SBATCH --time=00:30:00
+#SBATCH --time=05:00:00
 #SBATCH --get-user-env
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
@@ -30,7 +30,7 @@ vcftools --gzvcf $VCFPATH/$VCFIN \
 
 echo "Filtering Samples Done"
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4115282 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4115586 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 # DATA POLARIZATION SCRIPT
