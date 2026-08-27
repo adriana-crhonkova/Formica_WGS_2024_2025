@@ -116,7 +116,7 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem
 python /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/run_diem.py 
 
 # ---------------------------- END OF BASH JOB -----------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4114935 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4123563 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/output/test1_3aq_3lu_3pol_3ru_diem_polarized.diemtype .
 
