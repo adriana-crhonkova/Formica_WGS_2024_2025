@@ -1,7 +1,7 @@
 ## Create a filtered vcf for diem analysis
 # vcffilt.sh
 # ----------------------------------------------------------------------------------------------------------------------------------
-#!/bin/bash -l
+#!/bin/bash
 #SBATCH --job-name=vcffilt
 #SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffilt_%j.out
 #SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffilt_%j.err
@@ -30,7 +30,8 @@ vcftools --gzvcf $VCFPATH/$VCFIN \
 
 echo "Filtering Samples Done"
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4153656 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4153857 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
 
 
 # DATA POLARIZATION SCRIPT
