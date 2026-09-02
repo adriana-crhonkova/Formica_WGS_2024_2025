@@ -30,6 +30,13 @@ vcftools --gzvcf $VCFPATH/$VCFIN \
 #  ind_list_D6 contains all LMUF except F. exsecta + reference samples from Finland and Switzerland
 
 
+echo "Filtering Samples aq, lu, ru, pol + references"
+vcftools --gzvcf $VCFPATH/$VCFIN \
+  --keep $VCFPATH/ind_list_RefLMUF_aqlupolru.txt \
+  --recode --recode-INFO-all \
+  --stdout | bgzip > $VCFPATH/DP8.AN10.noScaff0003.mac2.thin20kb.LMUF_Ref_aqlurupol.vcf.gz
+#  ind_list_RefLMUF_aqlupolru.txt contains all LMUF and References except F. exsecta and F. pratensis
+
 echo "Filtering Samples aq, lu, ru, pol, pra"
 vcftools --gzvcf $VCFPATH/$VCFIN \
   --keep $VCFPATH/ind.list.onlyLMUF.txt \
@@ -49,6 +56,7 @@ echo "DONE"
 
 # ------------- END OF THE BASH SCRIPT  --------------------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4156866 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4157220 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 
@@ -117,6 +125,51 @@ snpgdsClose(genofile)
 
 # -------------------------------------------------------------- END of R script -----------------------------------------------------------------
 sacct -M biohpc_gen -j 4156938 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+# LMUF and Ref aquilonia, lugubris, polyctena, rufa
+# ----------------------------------------------- R script --------------------------------------------------------
+# run_pca_snprelate_RefLMUF_aqlurupol.R
+library(SNPRelate)
+
+# Define input and output paths
+vcf.fn <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt/DP8.AN10.noScaff0003.mac2.thin20kb.LMUF_Ref_aqlurupol.vcf.gz"
+gds.fn <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/DP8_LMUFRefaqlurupol.gds"
+out.prefix <- "/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/DP8_LMUFRefaqlurupol_PCA"
+
+cat("=== Converting VCF to GDS ===\n")
+snpgdsVCF2GDS(vcf.fn, gds.fn, method="copy.num.of.ref")
+
+cat("=== Opening GDS file ===\n")
+genofile <- snpgdsOpen(gds.fn)
+
+cat("=== Checking SNP summary ===\n")
+print(snpgdsSummary(genofile))
+
+cat("=== Running PCA ===\n")
+pca <- snpgdsPCA(genofile, num.thread=1, autosome.only=FALSE)
+pc.percent <- pca$varprop * 100
+
+# Save PCA results
+pca.df <- data.frame(
+  sample = pca$sample.id,
+  PC1 = pca$eigenvect[,1],
+  PC2 = pca$eigenvect[,2],
+  PC3 = pca$eigenvect[,3],
+  PC4 = pca$eigenvect[,4],
+  stringsAsFactors = FALSE
+)
+
+write.csv(pca.df, paste0(out.prefix, "_scores.csv"), row.names = FALSE)
+write.csv(round(pc.percent, 2), paste0(out.prefix, "_variance.csv"), row.names = FALSE)
+
+cat("=== PCA completed successfully ===\n")
+snpgdsClose(genofile)
+
+
+# -------------------------------------------------------------- END of R script -----------------------------------------------------------------
+sacct -M biohpc_gen -j 4157223 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+
+
 
 
 
@@ -208,3 +261,4 @@ sacct -M biohpc_gen -j 4156943 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/pca/DP8_LMUFRefaqlurupol_PCA_*.csv .
