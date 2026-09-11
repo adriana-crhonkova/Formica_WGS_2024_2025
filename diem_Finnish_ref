@@ -30,7 +30,7 @@ vcftools --gzvcf $VCFPATH/$VCFIN \
 
 echo "Filtering Samples Done"
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4153857 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4167068 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 
