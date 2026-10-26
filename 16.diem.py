@@ -401,7 +401,7 @@ polarizedDiemTypeOutFile = 'output/LMUF_11aq_11pol.diemtype'
 diem.save_DiemType(dPol,polarizedDiemTypeOutFile)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4212064 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/output/LMUF_11aq_11pol.diemtype .
