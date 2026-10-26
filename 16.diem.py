@@ -322,6 +322,10 @@ sacct -M biohpc_gen -j 4165722 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/output/LMUF_all_ru_pol_aq_lu_reduced2.diemtype .
 
 
+# ____________________________________________________________________________________________________________________________________________________________
+##### PAIRWISE COMPARISONS
+## AQ X POL
+
 # vcffilt_LMUF_11aq_11pol.sh
 # ----------------------------------------------------------------------------------------------------------------------------------
 #!/bin/bash
@@ -409,6 +413,40 @@ scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/W
 
 
 
+# -------------------------------------------------------------------------------------------------------------------------------------------
+## AQ X POL
+
+# vcffilt_LMUF_9ru_9lu.sh
+# ----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash
+#SBATCH --job-name=vcffiltLMUF_11aq_11pol
+#SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffiltLMUF_9ru_9lu_%j.out
+#SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffiltLMUF_9ru_9lu_%j.err
+#SBATCH --time=10:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=2GB
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
+
+echo "Filtering Samples"
+
+DIEMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem
+VCFIN=LMUF_all_ru_pol_aq_lu.vcf.gz
+vcftools --gzvcf $DIEMPATH/data/$VCFIN \
+  --keep $DIEMPATH/LMUF_9ru_9lu.txt \
+  --recode --recode-INFO-all \
+  --stdout | bgzip > $DIEMPATH/data/LMUF_9ru_9lu.vcf.gz
+
+echo "Filtering Samples Done"
+# ---------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4212077 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 
