@@ -123,7 +123,7 @@ scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/W
 
 
 
-
+########## PAIRWISE COMPARISONS
 ######## ONLY AQ + POL + HYB
 
 # ______________________________________________________________________________________________________________________________________________
@@ -250,9 +250,6 @@ scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/W
 
 
 
-
-
-
 # DATA POLARIZATION SCRIPT WITH MASKING 
 # run_diem.py 
 # ------------------------------------------------------------------------------------------------------------------
@@ -308,9 +305,40 @@ sacct -M biohpc_gen -j 4212040 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/output/Finn_6aq_6pol_6hyb_masked.diemtype .
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------
+######## ONLY RU + LU
 
+# vcffiltFinn_6lu_6ru.sh
+# ----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash
+#SBATCH --job-name=vcffiltFinn_6lu_6ru
+#SBATCH --output=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffiltFinn_6lu_6ru_%j.out
+#SBATCH --error=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/logs/vcffiltFinn_6lu_6ru_%j.err
+#SBATCH --time=10:00:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=2GB
+#SBATCH --mail-user=ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
 
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
 
+echo "Filtering Samples"
+
+DIEMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem
+VCFIN=Finn_diem.vcf.gz
+vcftools --gzvcf $DIEMPATH/data/$VCFIN \
+  --keep $DIEMPATH/Finn_6lu_6ru.txt \
+  --recode --recode-INFO-all \
+  --stdout | bgzip > $DIEMPATH/data/Finn_6lu_6ru.vcf.gz
+
+echo "Filtering Samples Done"
+# ---------------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 
