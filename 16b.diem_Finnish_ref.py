@@ -338,7 +338,7 @@ vcftools --gzvcf $DIEMPATH/data/$VCFIN \
 
 echo "Filtering Samples Done"
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4212300 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 
