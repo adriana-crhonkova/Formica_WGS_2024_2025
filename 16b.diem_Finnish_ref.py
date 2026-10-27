@@ -390,7 +390,7 @@ diem.save_DiemType(dPol,polarizedDiemTypeOutFile)
 # ----------------------------------------------------------------------------------------------------------
 
 ## Run using the bash script above
-sacct -M biohpc_gen -j 4212454 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4212472 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 scp re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem/output/Finn_6lu_6ru.diemtype .
 
