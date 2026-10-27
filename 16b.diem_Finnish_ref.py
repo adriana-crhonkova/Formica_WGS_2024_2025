@@ -329,16 +329,17 @@ mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcf
 
 echo "Filtering Samples"
 
+VCFPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/raw
 DIEMPATH=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/diem
-VCFIN=Finn_diem.vcf.gz
-vcftools --gzvcf $DIEMPATH/data/$VCFIN \
+VCFIN=all_samples.vcf.gz
+vcftools --gzvcf $VCFPATH/$VCFIN \
   --keep $DIEMPATH/Finn_6lu_6ru.txt \
   --recode --recode-INFO-all \
   --stdout | bgzip > $DIEMPATH/data/Finn_6lu_6ru.vcf.gz
 
 echo "Filtering Samples Done"
 # ---------------------------------------------------------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4212300 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
+sacct -M biohpc_gen -j 4212462 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State
 
 
 # DATA POLARIZATION SCRIPT WITH MASKING 
