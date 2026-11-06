@@ -14,6 +14,10 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_f
 ## gvcf.bam.all.list  would be identical to all.bam.list used for SNP calling with freebayes
 cp all.bam.list /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/
 
+# get scaffold list
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
+grep -i '^>.*scaffold' Formica_hybrid_v1_wFhyb_Sapis.fa | grep -viE 'scaffold(00|03)' | sed 's/^>//' > scaffold_no0300.list
+
 
 # 39.allsites_vcf_highcovsamples_mac2.sh
 # ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
@@ -42,7 +46,7 @@ mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcf
 cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/raw/
 
 # Get scaffold ID
-REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome/
+REF=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Reference_Genome
 scaffold=$(sed -n "$SLURM_ARRAY_TASK_ID"p ${REF}/scaffold_no0300.list)
 
 # write gvcf
@@ -117,7 +121,7 @@ rm ${scaffold}_allsamples_meanDP${mindp}-${maxdp}*
 rm ${scaffold}_highcovsamples_meanDP${mindp}-${maxdp}*
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4233376 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4233434 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 ########## NOT EDITED YET ###################
 
