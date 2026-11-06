@@ -218,7 +218,7 @@ mkdir individualDP
 ##
 
 #create a list of individuals remaining in the vcf (safe to run on login node)
-cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/Finnish_Training_Samples/05.VCF/filt
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/03.VCF/filt
 
 mamba activate bcftools.env
 vcf-query -l all_samples.normalized.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.vcf.gz > ind.list
