@@ -26,12 +26,12 @@ grep -i '^>.*scaffold' Formica_hybrid_v1_wFhyb_Sapis.fa | grep -viE 'scaffold(00
 #SBATCH -J allsites_vcf_highcovsamples_mac2
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_highcovsamples_mac2_%j_%a.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_highcovsamples_mac2_%j_%a.err
-#SBATCH -t 72:00:00
+#SBATCH -t 24:00:00
 #SBATCH --clusters=biohpc_gen
-#SBATCH --partition=biohpc_gen_production
+#SBATCH --partition=biohpc_gen_normal
 #SBATCH --array=1-26%10
 #SBATCH --ntasks 1
-#SBATCH --mem=8G
+#SBATCH --mem=2G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
 #SBATCH --mail-type=END,FAIL
 
@@ -114,14 +114,23 @@ ${scaffold}_highcovsamples_meanDP${mindp}-${maxdp}_maxNA50perc_var.vcf.gz \
 # Index for concat afterwards
 tabix ${scaffold}_highcovsamples_filtered.vcf.gz
 
-echo "Removing temp files ..."
+
 # Remove temp files
-rm ${scaffold}_allsamples_meanDP${mindp}-${maxdp}_maxNA50perc*
-rm ${scaffold}_allsamples_meanDP${mindp}-${maxdp}*
-rm ${scaffold}_highcovsamples_meanDP${mindp}-${maxdp}*
+echo "Removing temp files ..."
+
+# Remove intermediate files after DP filtering
+rm -f ${scaffold}_allsamples_meanDP${mindp}-${maxdp}*
+# rm -f Scaffold*_allsamples_meanDP*
+
+# Remove intermediate files after missing data filtering
+rm -f ${scaffold}_highcovsamples_meanDP${mindp}-${maxdp}*
+# rm -f Scaffold*_highcovsamples_meanDP*
+
+echo "${scaffold} DONE"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j 4233434 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4233970 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
 
 ########## NOT EDITED YET ###################
 
