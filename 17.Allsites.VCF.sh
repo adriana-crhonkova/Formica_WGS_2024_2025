@@ -131,47 +131,50 @@ echo "${scaffold} DONE"
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4233970 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+# 40.allsites_vcf_concat_rmdup.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+#!/bin/bash -l
+#SBATCH -J allsites_vcf_concat_rmdup
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_concat_rmdup_%j_%a.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_concat_rmdup_%j_%a.err
+#SBATCH -t 24:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=8G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
 
-########## NOT EDITED YET ###################
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
 
-### Interactive script to combine the per scaffold gvcf files ### ----------------------------
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
 
+# change directory
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/raw/
+
+echo "Making a list of vcfs"
 
 # Combine VCFs
-cd /scratch/project_2001443/barriers_introgr_formica/gvcf/raw/
-
 #ls *allsamples_filtered.vcf.gz > all_filtered_vcfs.list
 ls *_highcovsamples_filtered.vcf.gz > highcovsamples_filtered_vcfs.list
 
-sinteractive...
-module load biokit
+echo "Combining vcfs"
 
 bcftools concat \
 --allow-overlaps \
 -f highcovsamples_filtered_vcfs.list \
 -Oz > ../highcovsamples_filtered.vcf.gz
 
-tabix highcovsamples_filtered.vcf.gz
+tabix ../highcovsamples_filtered.vcf.gz
 
+echo "Combining vcfs DONE"
 
-### Filter out duplicate sites from the all-sites vcf highcovsamples_filtered.vcf.gz ### ----------------------------
+# Filter out duplicate sites from the all-sites vcf highcovsamples_filtered.vcf.gz 
 
-
-### remove_duplicates_highcov.sh ### 
-#!/bin/bash -l
-#SBATCH -J remove_duplicates_highcov
-#SBATCH -o /scratch/project_2001443/barriers_introgr_formica/gvcf/logs/remove_duplicates_highcov.out
-#SBATCH -e /scratch/project_2001443/barriers_introgr_formica/gvcf/logs/remove_duplicates_highcov.err
-#SBATCH --account=project_2001443
-#SBATCH -t 24:00:00
-#SBATCH -p small
-#SBATCH --ntasks 1
-#SBATCH --mem=8G
-
-module load biokit
-cd /scratch/project_2001443/barriers_introgr_formica/gvcf
-
-VCFIN=/scratch/project_2001443/barriers_introgr_formica/gvcf/highcovsamples_filtered.vcf.gz
+VCFIN=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered.vcf.gz
 
 echo "counting the initial number of sites in highcovsamples_filtered.vcf.gz ..."
 bcftools index -n $VCFIN
@@ -207,4 +210,7 @@ bcftools index -n highcovsamples_filtered_noindels_rmdup.vcf.gz
 echo "counting how many duplicates remain (divide by two)..."
 gunzip -c highcovsamples_filtered_noindels_rmdup.vcf.gz | cut -f2 | uniq -D | wc -l
 
-### END.
+echo "DONE"
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4248259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
