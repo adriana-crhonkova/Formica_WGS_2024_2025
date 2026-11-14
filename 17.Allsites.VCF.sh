@@ -196,7 +196,7 @@ echo "counting how many duplicates are left (divide the number by two)..."
 gunzip -c highcovsamples_filtered_noindels.vcf.gz | cut -f2 | uniq -D | wc -l
 
 echo "checking examples of what kind of variants they are - mnps? look at these coordinates in the highcovsamples_filtered_noindels.vcf.gz file..."
-gunzip -c highcovsamples_filtered_noindels.vcf.gz | grep "Scaffold01" | cut -f2 | uniq -D | head     # e.g. xx, yy, zz
+gunzip -c highcovsamples_filtered_noindels.vcf.gz | grep "Scaffold01" | cut -f2 | uniq -D | sed -n '1,10p'     # e.g. xx, yy, zz
 #bcftools view -H -r Scaffold01:5047119 highcovsamples_filtered_noindels.vcf.gz #They are mnps
 
 #Always the first one is the snp and the second one mnp. Remove all second instances
@@ -213,4 +213,53 @@ gunzip -c highcovsamples_filtered_noindels_rmdup.vcf.gz | cut -f2 | uniq -D | wc
 echo "DONE"
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4248259 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+# the job failed at the code gunzip -c highcovsamples_filtered_noindels.vcf.gz | grep "Scaffold01" | cut -f2 | uniq -D | head
+# changed head to sed -n '1,10p'
+# will re-run the script from this part (see below)
+
+
+# 41.allsites_vcf_concat_rmdup_rest.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+#!/bin/bash -l
+#SBATCH -J allsites_vcf_concat_rmdup
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_concat_rmdup_rest_%j_%a.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/logs/allsites_vcf_concat_rmdup_rest_%j_%a.err
+#SBATCH -t 12:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=8G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/bcftools.env
+
+# change directory
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF
+
+echo "checking examples of what kind of variants they are - mnps? look at these coordinates in the highcovsamples_filtered_noindels.vcf.gz file..."
+gunzip -c highcovsamples_filtered_noindels.vcf.gz | grep "Scaffold01" | cut -f2 | uniq -D | sed -n '1,10p'     # e.g. xx, yy, zz
+#bcftools view -H -r Scaffold01:5047119 highcovsamples_filtered_noindels.vcf.gz #They are mnps
+
+#Always the first one is the snp and the second one mnp. Remove all second instances
+echo "removing all second instances of duplicate sites (expecting the first ones to be the real snps)..."
+bcftools norm --rm-dup all --threads 8 -Oz highcovsamples_filtered_noindels.vcf.gz > highcovsamples_filtered_noindels_rmdup.vcf.gz
+bcftools index -t highcovsamples_filtered_noindels_rmdup.vcf.gz
+
+echo "counting how many sites remain after duplicate filtering (add to this the initial #of duplicates - does it match with the input vcf site count?) ..."
+bcftools index -n highcovsamples_filtered_noindels_rmdup.vcf.gz 
+
+echo "counting how many duplicates remain (divide by two)..."
+gunzip -c highcovsamples_filtered_noindels_rmdup.vcf.gz | cut -f2 | uniq -D | wc -l
+
+echo "DONE"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4250496 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
 
