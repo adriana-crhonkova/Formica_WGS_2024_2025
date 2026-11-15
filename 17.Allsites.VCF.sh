@@ -263,3 +263,49 @@ echo "DONE"
 sacct -M biohpc_gen -j 4250496 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+### OUTPUT 
+#Making a list of vcfs
+#Combining vcfs
+#Combining vcfs DONE
+#counting the initial number of sites in highcovsamples_filtered.vcf.gz ...
+#193416582
+#counting the amount of duplicates in highcovsamples_filtered.vcf.gz (divide this number by two)...
+#/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered.vcf.gz
+#176466
+#counting how many sites remain after TYPEref and TYPEsnp filtering...
+#193334584
+#counting how many duplicates are left (divide the number by two)...
+#18426
+#checking examples of what kind of variants they are - mnps? look at these coordinates in the highcovsamples_filtered_noindels.vcf.gz file...
+#44402
+#44402
+#44426
+#44426
+#51557
+#51557
+#113079
+#113079
+#145465
+#145465
+#removing all second instances of duplicate sites (expecting the first ones to be the real snps)...
+#counting how many sites remain after duplicate filtering (add to this the initial #of duplicates - does it match with the input vcf site count?) ...
+#193325371
+#counting how many duplicates remain (divide by two)...
+#0
+#DONE
+
+## Initial vcf
+# 193416582 
+# 176466 divide by 2 = 88233
+## Filtering TYPEref and TYPEsnp
+# 193334584
+# 18426 divide by 2 = 9213
+## Removing all second instances of duplicate sites
+# 193325371 
+# add to this the initial #of duplicates 193325371 + 176466 or 193325371 + 88233
+# 193,501,837 or 193,413,604 ... that does not match with the initial vcf
+
+## probably meant to compare vcf after filtering TYPEref and TYPEsnp
+# 193334584 - 9213 = 193325371 - agrees with the final number after duplicate removal
+
+
