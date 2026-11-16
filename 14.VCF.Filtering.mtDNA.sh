@@ -184,7 +184,6 @@ scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WG
 # Statistics > Identical Sequences > Log to file? > Yes
 # Statistics > All stats > Log to file? > Yes
 
-
 _________________________________________________________________________________________________________________________________________________________________
 ## Dataset 2
 
@@ -386,4 +385,66 @@ sacct -M biohpc_gen -j 4152484 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/LMUF_samples_mtDNA_norm.SnpGap_2.NonSNP.Balance.PASS.decomposed.SNPQ30.biall.fixedHeader.imiss .
 
 
+# ___________________________________________________________________________________________________________________________________________________________________
+# DATASET 3 
 
+# I take the fasta files created in DATASET 1 (30_vcf_filtering_mtDNA.sh + interactive job after that).
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt
+
+# SANITY CHECK: count LMUF filtered  samples
+# I will use "cat LMUF*.fa" - just double checking I will get the correct number of samples 
+# expected count is 89 LMUF - 36 removed due to low quality of mtDNA - F. exsecta samples = 49 (+1 because one of F. exsecta was removed due to seq quality) = 50
+ls LMUF*.fa | wc -l
+# output 50
+
+# create a list of LMUF filtered  samples (for Popart)
+ls LMUF*.fa | sed 's/.mtDNA.fa$//' > filt_LMUF_mtDNAsamples_list.txt
+
+
+42_filt.alignment_mtDNA_LMUF.sh
+-------------------- START OF BASH JOB -----------------------------------------------------------------------------------------------------------------------------------
+#!/bin/bash 
+#SBATCH -J filt.alignment_mtDNA_LMUF
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA_LMUF.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/logs/filt.alignment_mtDNA_LMUF.err
+#SBATCH -t 00:30:00
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mafft.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt
+
+echo "Combining FASTA files"
+# Concatenate all sample FASTAs into one file
+cat LMUF*.fa > filt_LMUF_mtDNAsamples.fa
+
+echo "Alignment"
+## --anysymbol accept any valid text character which could occur because of missing data
+mafft --anysymbol --thread "${SLURM_CPUS_PER_TASK}" \
+    filt_LMUF_mtDNAsamples.fa \
+    > filt_LMUF_mtDNAsamples_aligned.fa
+
+
+echo "Converting to Nexus"
+
+perl /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/Fasta2NEXUS.pl \
+    /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt/filt_LMUF_mtDNAsamples_aligned.fa \
+    /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt/filt_LMUF_mtDNAsamples_aligned.nex
+
+echo "DONE" 
+
+-------------------- END OF BASH JOB ----------------------------------------------------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4250989 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt/filt_LMUF_mtDNAsamples_aligned.nex .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/04.VCF.mtDNA/indiv_samples_mtDNA/ind_mtDNA_ref_lmuf_filt/filt_LMUF_mtDNAsamples_list.txt
