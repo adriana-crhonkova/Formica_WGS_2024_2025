@@ -82,7 +82,7 @@ pixy --stats pi dxy fst \
 --vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
 --populations groupfiles/Bav_5ind_species_fixed.tab \
 --window_size 100000 \
---output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
 --output_prefix Bav_5ind_species \
 --n_cores 8
 
