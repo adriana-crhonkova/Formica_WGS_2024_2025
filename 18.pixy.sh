@@ -11,12 +11,48 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
 ### 1. Prepare group files for PIXY ------
 
 # DATASET 1 - Bavaria between species comparisons
+cd groupfiles
+vi Bav_5ind_species.tab
+
+# INSERT FOLLOWING
+LMUF_00005d.merged      aq
+LMUF_00018a.merged      aq
+LMUF_00031a.merged      aq
+LMUF_00036a.merged      aq
+LMUF_00109b.merged      aq
+LMUF_00132b.merged      pol
+LMUF_00312a.merged      pol
+LMUF_00324c.merged      pol
+LMUF_00341c.merged      pol
+LMUF_00400c.merged      pol
+LMUF_00010a.merged      ru
+LMUF_00025a.merged      ru
+LMUF_00041a.merged      ru
+LMUF_00101a.merged      ru
+LMUF_00118c.merged      ru
+LMUF_00012a.merged      lu
+LMUF_00026a.merged      lu
+LMUF_00035a.merged      lu
+LMUF_00202a.merged      lu
+LMUF_00237a.merged      lu
+
+# Check whether the columns are really separated by tab
+cat -A Bav_5ind_species.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+
+# If some of the output is in format "LMUF_00025a.merged      ru$", run following:
+awk 'BEGIN {OFS="\t"} {$1=$1; print}' \
+Bav_5ind_species.tab \
+> Bav_5ind_species_fixed.tab
+
+# sanity check 
+cat -A Bav_5ind_species_fixed.tab
 
 
 
 
 ### 2. Compute PIXY ------
-# Bav_5inds_pixy.sh
+# 43.Bav_5inds_pixy.sh
 # ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
 
 #!/bin/bash -l
@@ -44,12 +80,14 @@ echo "Starting pixy"
 
 pixy --stats pi dxy fst \
 --vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
---populations groupfiles/Bav_5inds_pixy.tab \
+--populations groupfiles/Bav_5ind_species_fixed.tab \
 --window_size 100000 \
---output_prefix Bav_5inds_pixy \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+--output_prefix Bav_5ind_species \
 --n_cores 8
 
 echo "Done"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4254687 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
