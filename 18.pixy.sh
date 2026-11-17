@@ -91,3 +91,7 @@ echo "Done"
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4254687 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+# the job failed, but because I was missing "\" after --output_folder path and therefore flags under it were not part of the pixy flags.
+# I renamed the output files with the --output_prefix Bav_5ind_species
+## Run time  02:44:31 -> 5 hours should be enough
+## Used memory 275664K = 275,664 MB -> 2GB should be enough
