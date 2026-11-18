@@ -95,3 +95,7 @@ sacct -M biohpc_gen -j 4254687 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 # I renamed the output files with the --output_prefix Bav_5ind_species
 ## Run time  02:44:31 -> 5 hours should be enough
 ## Used memory 275664K = 275,664 MB -> 2GB should be enough
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_dxy.txt .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_fst.txt .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_pi.txt .
