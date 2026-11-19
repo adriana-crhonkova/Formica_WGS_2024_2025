@@ -11,30 +11,32 @@ cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
 ### 1. Prepare group files for PIXY ------
 
 # DATASET 1 - Bavaria between species comparisons
+## The samples were chosen based on the least missing data + each from different location
+
 cd groupfiles
 vi Bav_5ind_species.tab
 
 # INSERT FOLLOWING
-LMUF_00005d.merged      aq
-LMUF_00018a.merged      aq
-LMUF_00031a.merged      aq
-LMUF_00036a.merged      aq
-LMUF_00109b.merged      aq
-LMUF_00132b.merged      pol
-LMUF_00312a.merged      pol
-LMUF_00324c.merged      pol
-LMUF_00341c.merged      pol
-LMUF_00400c.merged      pol
-LMUF_00010a.merged      ru
-LMUF_00025a.merged      ru
-LMUF_00041a.merged      ru
-LMUF_00101a.merged      ru
-LMUF_00118c.merged      ru
-LMUF_00012a.merged      lu
-LMUF_00026a.merged      lu
-LMUF_00035a.merged      lu
-LMUF_00202a.merged      lu
-LMUF_00237a.merged      lu
+LMUF_00548a.merged	aq
+LMUF_00226a.merged	aq
+LMUF_00523a.merged	aq
+LMUF_00510a.merged	aq
+LMUF_00020a.merged	aq
+LMUF_00035a.merged	lu
+LMUF_00027a.merged	lu
+LMUF_00237a.merged	lu
+LMUF_00202a.merged	lu
+LMUF_00012a.merged	lu
+LMUF_00525a.merged	pol
+LMUF_00400c.merged	pol
+LMUF_00324c.merged	pol
+LMUF_00132b.merged	pol
+LMUF_00430c.merged	pol
+LMUF_00025a.merged	ru
+LMUF_00010a.merged	ru
+LMUF_00041a.merged	ru
+LMUF_00118c.merged	ru
+LMUF_00407b.merged	ru
 
 # Check whether the columns are really separated by tab
 cat -A Bav_5ind_species.tab
@@ -59,11 +61,11 @@ cat -A Bav_5ind_species_fixed.tab
 #SBATCH -J Bav_5inds_pixy
 #SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Bav_5inds_pixy_%j.out
 #SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Bav_5inds_pixy_%j.err
-#SBATCH -t 24:00:00
+#SBATCH -t 5:00:00
 #SBATCH --clusters=biohpc_gen
 #SBATCH --partition=biohpc_gen_normal
 #SBATCH --ntasks 8
-#SBATCH --mem=4G
+#SBATCH --mem=2G
 #SBATCH --mail-user ada.crhonkova@seznam.cz
 #SBATCH --mail-type=END,FAIL
 
@@ -95,6 +97,10 @@ sacct -M biohpc_gen -j 4254687 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 # I renamed the output files with the --output_prefix Bav_5ind_species
 ## Run time  02:44:31 -> 5 hours should be enough
 ## Used memory 275664K = 275,664 MB -> 2GB should be enough
+
+# new run with correct samples (the least missing data), the wrong (randomly chosen) moved to run1_wrong_samples
+sacct -M biohpc_gen -j 4258695 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
 
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_dxy.txt .
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_fst.txt .
