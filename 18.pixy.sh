@@ -147,11 +147,11 @@ LMUF_00226a.merged	aq_Bav
 LMUF_00523a.merged	aq_Bav
 LMUF_00510a.merged	aq_Bav
 LMUF_00020a.merged	aq_Bav
-104-Faq  aq
-44-FaquH	aq
-107-Faqu	aq
-109-Faqu	aq
-106-Faqu	aq
+104-Faq  aq_Fin
+44-FaquH	aq_Fin
+107-Faqu	aq_Fin
+109-Faqu	aq_Fin
+106-Faqu	aq_Fin
 
 # Check whether the columns are really separated by tab
 cat -A BavXFin_5ind_aquilonia.tab
@@ -204,7 +204,7 @@ pixy --stats pi dxy fst \
 echo "Done"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4259789 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
