@@ -267,7 +267,7 @@ pixy --stats pi dxy fst \
 echo "Done"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
-sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+sacct -M biohpc_gen -j 4259937 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
