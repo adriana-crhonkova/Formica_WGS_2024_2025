@@ -105,3 +105,118 @@ sacct -M biohpc_gen -j 4258695 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_dxy.txt .
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_fst.txt .
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Bav_5ind_species_pi.txt .
+
+
+# _________________________________________________________________________________________________________________________________________________
+## Comparisons between species from different locations (Finland X Bavaria)
+
+# FINNISH SAMPLES (F. polyctena from Switzerland)
+104-Faq  aq
+44-FaquH	aq
+107-Faqu	aq
+109-Faqu	aq
+106-Faqu	aq
+108-Flug	lu
+124-Flug	lu
+113-Flug	lu
+11-Flug	lu
+56-Flug	lu
+CBCH1_1w	pol
+CBCH2_2w	pol
+VDa_1w	pol
+CBCH3_1w	pol
+NAZa_1w	pol
+16-Frufa	ru
+37-Frufa	ru
+102-Frufa	ru
+26-Frufa	ru
+72-Frufa	ru
+
+
+
+
+# DATASET 2 - Aquilonia FinXBav
+
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+
+vi BavXFin_5ind_aquilonia.tab
+# insert following
+LMUF_00548a.merged	aq_Bav
+LMUF_00226a.merged	aq_Bav
+LMUF_00523a.merged	aq_Bav
+LMUF_00510a.merged	aq_Bav
+LMUF_00020a.merged	aq_Bav
+104-Faq  aq
+44-FaquH	aq
+107-Faqu	aq
+109-Faqu	aq
+106-Faqu	aq
+
+# Check whether the columns are really separated by tab
+cat -A BavXFin_5ind_aquilonia.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+
+# If some of the output is in format "LMUF_00025a.merged      ru$", run following:
+awk 'BEGIN {OFS="\t"} {$1=$1; print}' \
+BavXFin_5ind_aquilonia.tab \
+> BavXFin_5ind_aquilonia_fixed.tab
+
+# sanity check 
+cat -A BavXFin_5ind_aquilonia_fixed.tab
+
+
+### 2. Compute PIXY ------
+# 44.BavXFin_5ind_aquilonia_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXFin_5ind_aquilonia_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_aquilonia_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_aquilonia_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/BavXFin_5ind_aquilonia_fixed.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix BavXFin_5ind_aquilonia \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
