@@ -208,10 +208,66 @@ sacct -M biohpc_gen -j 4259796 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 
 
 
+# DATASET 3 - Rufa FinXBav
 
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
 
+vi BavXFin_5ind_rufa.tab
+# insert following
+LMUF_00025a.merged	ru_bav
+LMUF_00010a.merged	ru_bav
+LMUF_00041a.merged	ru_bav
+LMUF_00118c.merged	ru_bav
+LMUF_00407b.merged	ru_bav
+16-Frufa	ru_Fin
+37-Frufa	ru_Fin
+102-Frufa	ru_Fin
+26-Frufa	ru_Fin
+72-Frufa	ru_Fin
 
+# Check whether the columns are really separated by tab
+cat -A BavXFin_5ind_rufa.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
 
+### 2. Compute PIXY ------
+# 45.BavXFin_5ind_rufa_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXFin_5ind_rufa_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_rufa_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_rufa_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/BavXFin_5ind_rufa.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix BavXFin_5ind_rufa \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j XXX --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
