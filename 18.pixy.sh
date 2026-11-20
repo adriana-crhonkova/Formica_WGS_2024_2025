@@ -206,6 +206,7 @@ echo "Done"
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4259796 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/BavXFin_5ind_aquilonia_*.txt .
 
 
 # DATASET 3 - Rufa FinXBav
@@ -269,10 +270,132 @@ echo "Done"
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4259937 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/BavXFin_5ind_rufa_*.txt .
 
 
+# DATASET 4 - Lugubris FinXBav
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+
+vi BavXFin_5ind_lug.tab
+# insert following
+LMUF_00035a.merged	lu_Bav
+LMUF_00027a.merged	lu_Bav
+LMUF_00237a.merged	lu_Bav
+LMUF_00202a.merged	lu_Bav
+LMUF_00012a.merged	lu_Bav
+108-Flug	lu_Fin
+124-Flug	lu_Fin
+113-Flug	lu_Fin
+11-Flug	lu_Fin
+56-Flug	lu_Fin
+
+# Check whether the columns are really separated by tab
+cat -A BavXFin_5ind_lug.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+
+### 2. Compute PIXY ------
+# 46.BavXFin_5ind_lug_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXFin_5ind_rufa_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_lug_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXFin_5ind_lug_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/BavXFin_5ind_lug.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix BavXFin_5ind_lug \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4264421 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+# DATASET 5 - Polyctena SwissXBav
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+
+vi BavXSwiss_5ind_pol.tab
+# insert following
+LMUF_00525a.merged	pol_Bav
+LMUF_00400c.merged	pol_Bav
+LMUF_00324c.merged	pol_Bav
+LMUF_00132b.merged	pol_Bav
+LMUF_00430c.merged	pol_Bav
+CBCH1_1w	pol_Swiss
+CBCH2_2w	pol_Swiss
+VDa_1w	pol_Swiss
+CBCH3_1w	pol_Swiss
+NAZa_1w	pol_Swiss
+
+# Check whether the columns are really separated by tab
+cat -A BavXSwiss_5ind_pol.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+
+
+### 2. Compute PIXY ------
+# 47.BavXSwiss_5ind_pol_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXSwiss_5ind_pol_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXSwiss_5ind_pol_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/BavXSwiss_5ind_pol_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/BavXSwiss_5ind_pol.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix BavXSwiss_5ind_pol \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4264509 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
