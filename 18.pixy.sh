@@ -333,6 +333,7 @@ echo "Done"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4264421 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/BavXFin_5ind_lug_*.txt .
 
 
 # DATASET 5 - Polyctena SwissXBav
@@ -396,6 +397,91 @@ echo "Done"
 
 # ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
 sacct -M biohpc_gen -j 4264509 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/BavXSwiss_5ind_pol_*.txt .
+
+
+
+
+# DATASET 6 - Finland
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+
+vi Fin_5ind_species.tab
+# insert following
+
+104-Faqu  aq
+44-FaquH	aq
+107-Faqu	aq
+109-Faqu	aq
+106-Faqu	aq
+108-Flug	lu
+124-Flug	lu
+113-Flug	lu
+11-Flug	lu
+56-Flug	lu
+CBCH1_1w	pol
+CBCH2_2w	pol
+VDa_1w	pol
+CBCH3_1w	pol
+NAZa_1w	pol
+16-Frufa	ru
+37-Frufa	ru
+102-Frufa	ru
+26-Frufa	ru
+72-Frufa	ru
+
+# Check whether the columns are really separated by tab
+cat -A Fin_5ind_species.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+# If some of the output is in format "LMUF_00025a.merged      ru$", run following:
+awk 'BEGIN {OFS="\t"} {$1=$1; print}' \
+Fin_5ind_species.tab \
+> Fin_5ind_species_fixed.tab
+
+# sanity check 
+cat -A Fin_5ind_species_fixed.tab
+
+### 2. Compute PIXY ------
+# 48.Fin_5ind_species_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXSwiss_5ind_pol_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Fin_5ind_species_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Fin_5ind_species_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/Fin_5ind_species_fixed.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix Fin_5ind_species \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4267213 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
 
