@@ -190,13 +190,6 @@ paste ind_cov_sorted.list <(cut -f2 Fin_5ind_species_fixed_sorted.tab) > ind_cov
 # !!! ind_cov_species.list is not in the same order as samples in the mosdepth_highcovinds_100kb_regions_depth_coreregions.txt !!!
 # !!! correct sample order is at ind_cov.list
 
-awk 'BEGIN {FS=OFS="\t"}
-     NR==FNR {species[$1]=$2; next}
-     {
-         sample=$1
-         sub(/_overlap_correction\.regions\.bed\.gz$/, "", sample)
-         print $0, species[sample]
-     }' ind_cov_species.list ind_cov.list > ind_cov_species_corr_order.list
 
 ##### NOTES FROM INA ######
 #make the ind_cov.list to have species vcf_id as 1st col and species as 2nd col
@@ -218,4 +211,5 @@ awk 'BEGIN {FS=OFS="\t"}
 
 #get the files  mosdepth_highcovinds_100kb_regions_depth_coreregions.txt, ind_cov_species.list
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt .
-scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species_corr_order.list .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species.list .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov.list .
