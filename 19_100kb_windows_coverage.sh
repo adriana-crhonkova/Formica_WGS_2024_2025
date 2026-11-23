@@ -157,12 +157,11 @@ for file in mosdepth_highcovinds_*.out; do
 done > job_sample_mapping_2.txt
 
 
-# NOT EDITED YET
 
 
 ### Get average coverage per each window ----------------
 
-cd /scratch/project_2001443/bam/cov_highcovInds_5perSp
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp
 
 #paste per region coverage data for all pixy samples
 touch output.txt
@@ -175,20 +174,46 @@ for i in *regions.bed.gz; do
 done
 
 #paste region info as the first column
-zcat 108_overlap_correction.regions.bed.gz | awk -v OFS='\t' '{print $1, $2, $3}' > 1stcol.txt #extract region info
+zcat Ref_102_overlap_correction.regions.bed.gz | awk -v OFS='\t' '{print $1, $2, $3}' > 1stcol.txt #extract region info
 paste 1stcol.txt output.txt > mosdepth_highcovinds_100kb_regions_depth.txt
 rm 1stcol.txt output.txt
 
+#remove regions that are not used: mitchondria (mtDNA), Wolbachia (wFhyb*), and Spiroplasma (Spiroplasma*), as well as Scaffold00 and Scaffold03
+grep -v -e mtDNA -e wFhyb -e Spiroplasma -e Scaffold00 -e Scaffold03 mosdepth_highcovinds_100kb_regions_depth.txt > mosdepth_highcovinds_100kb_regions_depth_coreregions.txt
+# rm mosdepth_highcovinds_100kb_regions_depth.txt
+
+
+sort ind_cov.list >  ind_cov_sorted.list
+sort Fin_5ind_species_fixed.tab > Fin_5ind_species_fixed_sorted.tab
+
+paste ind_cov_sorted.list <(cut -f2 Fin_5ind_species_fixed_sorted.tab) > ind_cov_species.list
+# !!! ind_cov_species.list is not in the same order as samples in the mosdepth_highcovinds_100kb_regions_depth_coreregions.txt !!!
+# !!! correct sample order is at ind_cov.list
+
+awk 'BEGIN {FS=OFS="\t"}
+     NR==FNR {species[$1]=$2; next}
+     {
+         sample=$1
+         sub(/_overlap_correction\.regions\.bed\.gz$/, "", sample)
+         print $0, species[sample]
+     }' ind_cov_species.list ind_cov.list > ind_cov_species_corr_order.list
+
+##### NOTES FROM INA ######
 #make the ind_cov.list to have species vcf_id as 1st col and species as 2nd col
-nano ind_cov.list
 #modify it; resulting in ind_cov_species.list that has 1st row: chr, 2nd row: start, 3rd row: end, followed by ind/species info
 
-#remove regions that are not used: mitchondria (mtDNA), Wolbachia (wFhyb*), and Spiroplasma (Spiroplasma*), as well as Scaffold00 and Scaffold03
-grep -v -e mtDNA -e wFhyb -e Spiroplasma -e Scaffold00 -e Scaffold03 mosdepth_highcovinds_100kb_regions_depth.txt > mosdepth_highcovinds_100kb_regions_depth_coreregions.txt ; rm mosdepth_highcovinds_100kb_regions_depth.txt
+# Maybe change the names to short versions first
+{
+    printf "chr\tstart\tend"
+    cut -f1 ind_cov_species.list | while read sample; do
+        printf "\t%s" "$sample"
+    done
+    printf "\n"
+    cat mosdepth_highcovinds_100kb_regions_depth_coreregions.txt
+} > mosdepth_highcovinds_100kb_regions_depth_named.txt
+
+
 
 #get the files  mosdepth_highcovinds_100kb_regions_depth_coreregions.txt, ind_cov_species.list
-
-scp satokan1@puhti.csc.fi:'/scratch/project_2001443/bam/cov_highcovInds_5perSp/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt' \
-'/Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/Correlations_whole_genome/depth'
-scp satokan1@puhti.csc.fi:'/scratch/project_2001443/bam/cov_highcovInds_5perSp/ind_cov_species.list' \
-'/Users/inaukkar/Library/CloudStorage/OneDrive-UniversityofHelsinki/PhD/4_formica_local_genomics/Correlations_whole_genome/depth'
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species.list .
