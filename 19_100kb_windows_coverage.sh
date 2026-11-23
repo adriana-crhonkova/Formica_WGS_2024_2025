@@ -218,4 +218,4 @@ awk 'BEGIN {FS=OFS="\t"}
 
 #get the files  mosdepth_highcovinds_100kb_regions_depth_coreregions.txt, ind_cov_species.list
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt .
-scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species.list .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species_corr_order.list .
