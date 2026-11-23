@@ -202,6 +202,8 @@ awk 'BEGIN {FS=OFS="\t"}
 #make the ind_cov.list to have species vcf_id as 1st col and species as 2nd col
 #modify it; resulting in ind_cov_species.list that has 1st row: chr, 2nd row: start, 3rd row: end, followed by ind/species info
 
+
+### PROBABLY NOT USE THIS
 # Maybe change the names to short versions first
 {
     printf "chr\tstart\tend"
