@@ -293,6 +293,36 @@ echo "Finished sample: ${sample}"
 sacct -M biohpc_gen -j 4297480 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
 
 
+### Get average coverage per each window ----------------
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina
+
+#paste per region coverage data for all pixy samples
+touch output.txt
+touch ind_cov.list
+for i in *regions.bed.gz; do
+    zcat "$i" | awk -v OFS='\t' '{print $4}' | paste - output.txt > temp_output.txt
+    mv temp_output.txt output.txt
+    echo "Processed $i"
+    echo $i >> ind_cov.list
+done
+
+#paste region info as the first column
+zcat Ref_102_overlap_correction.regions.bed.gz | awk -v OFS='\t' '{print $1, $2, $3}' > 1stcol.txt #extract region info
+paste 1stcol.txt output.txt > mosdepth_highcovinds_100kb_regions_depth.txt
+rm 1stcol.txt output.txt
+
+#remove regions that are not used: mitchondria (mtDNA), Wolbachia (wFhyb*), and Spiroplasma (Spiroplasma*), as well as Scaffold00 and Scaffold03
+grep -v -e mtDNA -e wFhyb -e Spiroplasma -e Scaffold00 -e Scaffold03 mosdepth_highcovinds_100kb_regions_depth.txt > mosdepth_highcovinds_100kb_regions_depth_coreregions.txt
+# rm mosdepth_highcovinds_100kb_regions_depth.txt
+
+
+sort ind_cov.list >  ind_cov_sorted.list
+sort Fin_5ind_species_Ina_fixed.tab > Fin_5ind_species_Ina_fixed_sorted.tab
+
+paste ind_cov_sorted.list <(cut -f2 Fin_5ind_species_Ina_fixed_sorted.tab) > ind_cov_species.list
+# !!! ind_cov_species.list is not in the same order as samples in the mosdepth_highcovinds_100kb_regions_depth_coreregions.txt !!!
+# !!! correct sample order is at ind_cov.list
 
 
 
