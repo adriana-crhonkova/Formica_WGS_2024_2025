@@ -486,3 +486,108 @@ sacct -M biohpc_gen -j 4267213 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,Exi
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Fin_5ind_species_*.txt .
 
 
+
+
+# DATASET 7 - Finland same samples as Ina's
+
+
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+
+vi Fin_5ind_species_Ina.tab
+# insert following
+102-Frufa rufa
+104-Faqu aqu
+106-Faqu aqu
+107-Faqu aqu
+108-Flug lug
+109-Faqu aqu
+113-Flug lug
+115-Flug lug
+117-Fprat prat
+11-Flug lug
+120-Fprat prat
+122-Fprat prat
+123-Fprat prat
+124-Flug lug
+16-Frufa rufa
+26-Frufa rufa
+37-Frufa rufa
+44-FaquH aqu
+6-Fprat prat
+72-Frufa rufa
+CAGa_1w pol
+CBCH1_1w pol
+CBCH3_1w pol
+NAZa_1w pol
+VDa_1w pol
+
+
+# Check whether the columns are really separated by tab
+cat -A Fin_5ind_species_Ina.tab
+## Expected fortmat LMUF_00005d.merged^Iaq$
+# If some of the output is in format "LMUF_00025a.merged      ru$", run following:
+awk 'BEGIN {OFS="\t"} {$1=$1; print}' \
+Fin_5ind_species_Ina.tab \
+> Fin_5ind_species_Ina_fixed.tab
+
+### 2. Compute PIXY ------
+# 51.Fin_5ind_species_Ina_pixy.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J BavXSwiss_5ind_pol_pixy
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Fin_5ind_species_Ina_pixy_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/logs/Fin_5ind_species_Ina_pixy_%j.err
+#SBATCH -t 5:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --ntasks 8
+#SBATCH --mem=2G
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/pixy.env
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy
+
+echo "Starting pixy"
+
+pixy --stats pi dxy fst \
+--vcf /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/highcovsamples_filtered_noindels_rmdup.vcf.gz \
+--populations groupfiles/Fin_5ind_species_Ina_fixed.tab \
+--window_size 100000 \
+--output_folder /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy \
+--output_prefix Fin_5ind_species_Ina \
+--n_cores 8
+
+echo "Done"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4297172 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/Fin_5ind_species_Ina_*.txt 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
