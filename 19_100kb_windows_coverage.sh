@@ -213,3 +213,91 @@ paste ind_cov_sorted.list <(cut -f2 Fin_5ind_species_fixed_sorted.tab) > ind_cov
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt .
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov_species.list .
 scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/ind_cov.list .
+
+# everything later moved to /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species
+
+
+
+# _________________________________________________________________________________________________________________________________________________________________________________________________
+# Exact same samples as Ina used
+
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/05.gVCF/pixy/groupfiles
+cp Fin_5ind_species_Ina_fixed.tab /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/Fin_5ind_species_Ina_fixed.tab
+
+
+# generating the nodupl_highcovinds.list of .bam files used in pixy
+## final bam files have "Ref" prefix for references + some Finnish references have species suffix - the following code deals with that and generates the list for the following script.
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/
+
+awk '{
+    id = $1
+    if (id ~ /^[0-9]+-/) {
+        sub(/-.*/, "", id)
+    }
+    print "Ref_" id
+}' Fin_5ind_species_Ina_fixed.tab > nodupl_highcovinds_Ina.list
+
+
+
+# 52.mosdepth_highcovinds.sh
+# ------- START OF BASH SCRIPT ----------------------------------------------------------------------------------------
+
+#!/bin/bash -l
+#SBATCH -J mosdepth_highcovinds
+#SBATCH -o /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/logs/mosdepth_highcovinds_Ina_%j.out
+#SBATCH -e /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/logs/mosdepth_highcovinds_Ina_%j.err
+#SBATCH -t 01:00:00
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --array=1-25
+#SBATCH --ntasks 1
+#SBATCH --mem-per-cpu=4GB
+#SBATCH --mail-user ada.crhonkova@seznam.cz
+#SBATCH --mail-type=END,FAIL
+
+# set the script to stop immediately if any command fails or any part of a pipeline fails, preventing silent errors and corrupted results
+set -eo pipefail
+
+# Load environment mosdepth
+eval "$(mamba shell hook --shell bash)"
+mamba activate /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/mamba_envs/mosdepth
+
+BAMDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/bam_final/
+FINALDIR=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/
+NAMELIST=/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/nodupl_highcovinds_Ina.list
+
+cd /dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina
+
+# Get sample ID
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p $NAMELIST)
+
+# Select BAM filename based on sample name
+if [[ "$sample" =~ ^Ref_[0-9]+$ ]]; then
+    bam="$BAMDIR/${sample}_nodupl_wRG_clip.bam"
+else
+    bam="$BAMDIR/${sample}_nodupl_wRG.bam"
+fi
+
+echo "Processing sample: $sample"
+
+# Run mosdepth
+mosdepth -t 1 -b 100000 -n \
+    "$FINALDIR/${sample}_overlap_correction" \
+    "$bam"
+
+echo "Finished sample: ${sample}"
+
+# ------- END OF BASH SCRIPT ----------------------------------------------------------------------------------------
+sacct -M biohpc_gen -j 4297480 --format=JobID,Elapsed,MaxRSS,AllocCPUS,State,ExitCode
+
+
+
+
+
+
+
+
+
+
