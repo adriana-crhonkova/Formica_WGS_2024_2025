@@ -324,7 +324,9 @@ paste ind_cov_sorted.list <(cut -f2 Fin_5ind_species_Ina_fixed_sorted.tab) > ind
 # !!! ind_cov_species.list is not in the same order as samples in the mosdepth_highcovinds_100kb_regions_depth_coreregions.txt !!!
 # !!! correct sample order is at ind_cov.list
 
-
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/mosdepth_highcovinds_100kb_regions_depth_coreregions.txt .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/ind_cov_species.list .
+scp -r re98maw@cool.hpc.lrz.de:/dss/dsslegfs01/pn73qe/pn73qe-dss-0002/Formica_WGS/WGS_2024_2025/02.BAM/cov_highcovInds_5perSp/Fin_5ind_species_Ina/ind_cov.list .
 
 
 
